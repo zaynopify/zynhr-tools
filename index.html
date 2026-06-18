@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoya — ZynHR AI Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #1e2430;
+    --border2: #252d3a;
+    --gold: #c9a84c;
+    --gold2: #e8c96a;
+    --gold-dim: rgba(201,168,76,0.12);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --muted2: #9ca3af;
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --user-bubble: #1a2235;
+    --ai-bubble: #13181f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 85% 100%, rgba(59,130,246,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .header-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--gold) 0%, #7a5c1e 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .header-info h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  .header-info p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-left: auto;
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+  }
+
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  /* ── Setup Panel ── */
+  .setup-panel {
+    position: relative;
+    z-index: 5;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    flex-shrink: 0;
+  }
+
+  .setup-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted2);
+    font-family: 'DM Mono', monospace;
+    user-select: none;
+  }
+
+  .setup-toggle:hover { color: var(--gold2); }
+  .setup-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
+  .setup-toggle.open .arrow { transform: rotate(90deg); }
+
+  .setup-fields {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .setup-fields.visible { display: grid; }
+
+  @media (max-width: 600px) { .setup-fields { grid-template-columns: 1fr; } }
+
+  .setup-field { display: flex; flex-direction: column; gap: 5px; }
+  .setup-field.full { grid-column: 1 / -1; }
+
+  .field-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  input[type="text"], input[type="password"] {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  input:focus { border-color: var(--gold); }
+
+  .save-btn {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, var(--gold) 0%, #8b6914 100%);
+    border: none;
+    border-radius: 7px;
+    color: #0a0c0f;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 4px;
+    align-self: flex-end;
+  }
+
+  .save-btn:hover { opacity: 0.88; }
+
+  /* ── Document Bubble ── */
+  .doc-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-left: 3px solid var(--gold);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 6px;
+    max-width: 100%;
+  }
+  .doc-bubble-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .doc-bubble-title {
+    font-size: 12px; font-weight: 700; color: var(--gold2);
+    font-family: 'DM Mono', monospace;
+  }
+  .doc-bubble-preview {
+    font-size: 12px; color: var(--muted2); line-height: 1.6;
+    max-height: 160px; overflow-y: auto;
+    white-space: pre-wrap; font-family: 'DM Mono', monospace;
+    margin-bottom: 10px;
+    padding-right: 4px;
+  }
+  .doc-bubble-preview::-webkit-scrollbar { width: 4px; }
+  .doc-bubble-preview::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .doc-bubble-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .doc-btn {
+    padding: 6px 14px; border-radius: 6px; border: none;
+    font-size: 11.5px; font-weight: 700; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: opacity .15s;
+  }
+  .doc-btn:hover { opacity: .85; }
+  .doc-btn-pdf {
+    background: linear-gradient(135deg, var(--gold), #8b6914);
+    color: #0a0c0f;
+  }
+  .doc-btn-copy {
+    background: var(--surface); border: 1px solid var(--border2);
+    color: var(--muted2);
+  }
+
+  /* ── Chat Area ── */
+  .chat-area {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+
+  .chat-area::-webkit-scrollbar { width: 5px; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── Messages ── */
+  .message {
+    display: flex;
+    gap: 10px;
+    max-width: 85%;
+    animation: fadeUp 0.2s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message.ai { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .message.ai .msg-avatar {
+    background: linear-gradient(135deg, var(--gold) 0%, #7a5c1e 100%);
+  }
+
+  .message.user .msg-avatar {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+  }
+
+  .msg-bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    max-width: 100%;
+  }
+
+  .message.user .msg-bubble {
+    background: var(--user-bubble);
+    border: 1px solid var(--border2);
+    border-top-right-radius: 3px;
+    color: var(--text);
+  }
+
+  .message.ai .msg-bubble {
+    background: var(--ai-bubble);
+    border: 1px solid var(--border);
+    border-top-left-radius: 3px;
+    color: var(--text);
+  }
+
+  .msg-bubble strong { color: var(--gold2); font-weight: 600; }
+  .msg-bubble em { color: var(--muted2); font-style: normal; font-size: 12px; }
+
+  .msg-bubble ul {
+    margin: 8px 0 4px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .msg-bubble li { color: var(--muted2); }
+  .msg-bubble li strong { color: var(--text); }
+
+  .msg-time {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  .message.user .msg-time { text-align: right; }
+
+  /* ── Typing indicator ── */
+  .typing-indicator {
+    display: flex;
+    gap: 10px;
+    align-self: flex-start;
+    animation: fadeUp 0.2s ease;
+  }
+
+  .typing-dots {
+    background: var(--ai-bubble);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    border-top-left-radius: 3px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: var(--muted);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ── Quick prompts ── */
+  .quick-prompts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 20px 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .quick-btn {
+    padding: 6px 12px;
+    background: var(--gold-dim);
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--gold2);
+    border-radius: 20px;
+    font-size: 11.5px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .quick-btn:hover {
+    background: rgba(201,168,76,0.2);
+    border-color: var(--gold);
+  }
+
+  /* ── Input area ── */
+  .input-area {
+    position: relative;
+    z-index: 5;
+    padding: 12px 20px 16px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .input-wrap {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-end;
+    transition: border-color 0.2s;
+    padding: 2px;
+  }
+
+  .input-wrap:focus-within { border-color: var(--gold); }
+
+  #messageInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    outline: none;
+    resize: none;
+    max-height: 120px;
+    line-height: 1.5;
+    min-height: 42px;
+  }
+
+  #messageInput::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, var(--gold) 0%, #8b6914 100%);
+    border: none;
+    border-radius: 8px;
+    color: #0a0c0f;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s, transform 0.1s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { opacity: 0.88; transform: scale(1.04); }
+  .send-btn:active { transform: scale(0.97); }
+  .send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .input-hint {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* ── Welcome ── */
+  .welcome {
+    text-align: center;
+    padding: 30px 20px;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .welcome-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  .welcome h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .welcome p {
+    font-size: 13px;
+    color: var(--muted2);
+    line-height: 1.6;
+    max-width: 380px;
+    margin: 0 auto 20px;
+  }
+
+  .capabilities {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: left;
+  }
+
+  .cap-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--muted2);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .cap-item .cap-icon { font-size: 14px; flex-shrink: 0; }
+
+  @media (max-width: 480px) {
+    .capabilities { grid-template-columns: 1fr; }
+    .message { max-width: 95%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-avatar">🤖</div>
+  <div class="header-info">
+    <h1>Zoya — ZynHR AI Assistant</h1>
+    <p>Full HR OS Access · 10 Databases · FDL 33/2021 · Powered by Groq</p>
+  </div>
+  <div class="status-dot" id="statusDot"></div>
+</div>
+
+<!-- Setup Panel -->
+<div class="setup-panel">
+  <div class="setup-toggle" id="setupToggle" onclick="toggleSetup()">
+    <span class="arrow">▶</span>
+    <span>⚙️ API & Notion Settings</span>
+    <span style="margin-left:auto; font-size:10px; color:var(--muted)" id="setupStatus">Not configured</span>
+  </div>
+  <div class="setup-fields" id="setupFields">
+    <div class="setup-field full">
+      <div class="field-label">🔑 ZynHR OS License Key</div>
+      <input type="text" id="licenseKeyInput" placeholder="ZAYN-2026-XXXX-XXXX">
+      <div id="licenseStatus" style="font-size:11px;margin-top:4px;"></div>
+    </div>
+    <div class="setup-field full">
+      <div class="field-label">🔗 Notion Integration Token</div>
+      <input type="password" id="notionToken" placeholder="secret_...">
+    </div>
+    <div class="setup-field">
+      <div class="field-label">👥 Employee Database ID</div>
+      <input type="text" id="empDbId" placeholder="32-character Notion DB ID">
+    </div>
+    <div class="setup-field">
+      <div class="field-label">🏖️ Leave Requests DB ID</div>
+      <input type="text" id="leaveDbId" placeholder="32-character Notion DB ID">
+    </div>
+    <div class="setup-field">
+      <div class="field-label">✅ Compliance Tracker DB ID</div>
+      <input type="text" id="compDbId" placeholder="32-character Notion DB ID">
+    </div>
+    <div class="setup-field">
+      <div class="field-label">💰 Payroll DB ID</div>
+      <input type="text" id="payDbId" placeholder="32-character Notion DB ID">
+    </div>
+    <div class="setup-field full" style="display:flex; justify-content:flex-end;">
+      <button class="save-btn" onclick="saveConfig()">Save & Connect</button>
+    </div>
+    <!-- Letterhead Section -->
+    <div class="setup-field full" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border2);">
+      <div class="field-label" style="color:var(--gold); margin-bottom:8px;">🏢 Company Letterhead (for PDF documents)</div>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button id="lhTabText" onclick="switchChatLhTab('text')" style="flex:1;padding:8px;border-radius:7px;border:1.5px solid var(--gold);background:rgba(201,168,76,.1);color:var(--gold2);font-size:12px;font-weight:700;cursor:pointer;">✍️ Text</button>
+        <button id="lhTabImage" onclick="switchChatLhTab('image')" style="flex:1;padding:8px;border-radius:7px;border:1.5px solid var(--border2);background:transparent;color:var(--muted2);font-size:12px;font-weight:700;cursor:pointer;">🖼️ Upload Image</button>
+      </div>
+    </div>
+
+    <!-- Text Letterhead -->
+    <div id="lhTextMode">
+      <div class="setup-field">
+        <div class="field-label">Company Name</div>
+        <input type="text" id="lh_company" placeholder="e.g. Al Fajr Trading LLC">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">Address</div>
+        <input type="text" id="lh_address" placeholder="e.g. Office 412, Business Bay, Dubai">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">Phone</div>
+        <input type="text" id="lh_phone" placeholder="e.g. +971 4 123 4567">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">Email</div>
+        <input type="text" id="lh_email" placeholder="e.g. hr@company.com">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">HR Signatory Name</div>
+        <input type="text" id="lh_signatory" placeholder="e.g. Fatima Al Zaabi">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">HR Signatory Title</div>
+        <input type="text" id="lh_title" placeholder="e.g. HR Manager">
+      </div>
+      <div class="setup-field full" style="display:flex; justify-content:flex-end;">
+        <button class="save-btn" onclick="saveLetterhead()">💾 Save Text Letterhead</button>
+      </div>
+    </div>
+
+    <!-- Image Letterhead -->
+    <div id="lhImageMode" style="display:none;">
+      <div class="setup-field full">
+        <div class="field-label">Upload Company Letterhead (PNG/JPG, max 4MB)</div>
+        <div style="border:2px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;" onclick="document.getElementById('lhImgFileChat').click()">
+          <div style="font-size:24px;">🖼️</div>
+          <div style="font-size:12px;color:var(--muted2);margin-top:6px;">Click to upload your A4 letterhead</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:4px;">Design in Canva → export PNG → upload here</div>
+          <input type="file" id="lhImgFileChat" accept="image/png,image/jpeg" style="display:none" onchange="handleChatLhImage(event)">
+        </div>
+        <img id="lhImgPreviewChat" style="max-width:100%;max-height:120px;border-radius:6px;margin-top:8px;display:none;">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">Signatory Name</div>
+        <input type="text" id="lh_img_signatory" placeholder="e.g. Fatima Al Zaabi">
+      </div>
+      <div class="setup-field">
+        <div class="field-label">Signatory Title</div>
+        <input type="text" id="lh_img_title" placeholder="e.g. HR Manager">
+      </div>
+      <div class="setup-field full" style="display:flex; justify-content:flex-end;">
+        <button class="save-btn" onclick="saveChatImageLh()">💾 Save Image Letterhead</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chat Area -->
+<div class="chat-area" id="chatArea">
+  <div class="welcome" id="welcome">
+    <div class="welcome-icon">🇦🇪</div>
+    <h2>Your Zoya — ZynHR AI Assistant</h2>
+    <p>Ask me anything about UAE Labour Law, your employees, leave balances, gratuity calculations, or compliance status.</p>
+    <div class="capabilities">
+      <div class="cap-item"><span class="cap-icon">👥</span>Employee records & salaries</div>
+      <div class="cap-item"><span class="cap-icon">✅</span>Compliance & expiry alerts</div>
+      <div class="cap-item"><span class="cap-icon">🏖️</span>Leave requests & balances</div>
+      <div class="cap-item"><span class="cap-icon">💰</span>Payroll & WPS records</div>
+      <div class="cap-item"><span class="cap-icon">🚀</span>Onboarding & offboarding</div>
+      <div class="cap-item"><span class="cap-icon">🎯</span>Recruitment pipeline</div>
+      <div class="cap-item"><span class="cap-icon">📈</span>Performance & KPIs</div>
+      <div class="cap-item"><span class="cap-icon">⚖️</span>UAE Labour Law FDL 33/2021</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Prompts -->
+<div class="quick-prompts" id="quickPrompts">
+  <button class="quick-btn" onclick="quickSend('List all active employees with their department and salary')">👥 Active employees</button>
+  <button class="quick-btn" onclick="quickSend('Show me all compliance documents that are expired or critical')">⚠️ Compliance alerts</button>
+  <button class="quick-btn" onclick="quickSend('Show all pending leave requests')">🏖️ Pending leaves</button>
+  <button class="quick-btn" onclick="quickSend('Show June 2026 payroll summary and WPS status')">💰 Payroll status</button>
+  <button class="quick-btn" onclick="quickSend('What is the gratuity calculation under UAE Labour Law Article 51?')">💡 Gratuity calc</button>
+  <button class="quick-btn" onclick="quickSend('Show me all onboarding records and their status')">🚀 Onboarding</button>
+  <button class="quick-btn" onclick="quickSend('Show recruitment pipeline and candidate stages')">🎯 Recruitment</button>
+  <button class="quick-btn" onclick="quickSend('Show performance reviews and KPI ratings')">📈 Performance</button>
+</div>
+
+<!-- Input -->
+<div class="input-area">
+  <div class="input-row">
+    <div class="input-wrap">
+      <textarea id="messageInput" placeholder="Ask anything about your HR OS — employees, leave, payroll, compliance, recruitment..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+  <div class="input-hint">Enter to send · Shift+Enter for new line · Powered by Groq via Render Proxy</div>
+</div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────────────
+let config = {
+  apiKey: '',
+  notionToken: '',
+  empDbId: '',
+  leaveDbId: '',
+  compDbId: '',
+  payDbId: '',
+  licenseKey: ''
+};
+
+let conversationHistory = [];
+let isTyping = false;
+
+// Load saved config from localStorage
+(function loadConfig() {
+  try {
+    const saved = localStorage.getItem('uae_hr_config');
+    if (saved) {
+      config = { ...config, ...JSON.parse(saved) };
+      if (config.licenseKey) document.getElementById('licenseKeyInput').value = config.licenseKey;
+      document.getElementById('notionToken').value = config.notionToken || '';
+      document.getElementById('empDbId').value = config.empDbId || '';
+      document.getElementById('leaveDbId').value = config.leaveDbId || '';
+      document.getElementById('compDbId').value = config.compDbId || '';
+      document.getElementById('payDbId').value = config.payDbId || '';
+      updateSetupStatus();
+    }
+  } catch(e) {}
+})();
+
+function toggleSetup() {
+  const toggle = document.getElementById('setupToggle');
+  const fields = document.getElementById('setupFields');
+  toggle.classList.toggle('open');
+  fields.classList.toggle('visible');
+}
+
+function saveConfig() {
+  config.licenseKey = document.getElementById('licenseKeyInput').value.trim();
+  config.apiKey = '';
+  config.notionToken = document.getElementById('notionToken').value.trim();
+  config.empDbId = document.getElementById('empDbId').value.trim();
+  config.leaveDbId = document.getElementById('leaveDbId').value.trim();
+  config.compDbId = document.getElementById('compDbId').value.trim();
+  config.payDbId = document.getElementById('payDbId').value.trim();
+
+  try { localStorage.setItem('uae_hr_config', JSON.stringify(config)); } catch(e) {}
+
+  // Validate license key
+  if (config.licenseKey) {
+    fetch('https://uae-hr-proxy.onrender.com/validate-license', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: config.licenseKey })
+    }).then(r => r.json()).then(data => {
+      const status = document.getElementById('licenseStatus');
+      if (data.valid) {
+        if (status) { status.textContent = `✅ License active | Chats: ${data.usage.chats.remaining} remaining`; status.style.color = '#6ee7b7'; }
+      } else {
+        if (status) { status.textContent = `❌ ${data.error}`; status.style.color = '#f87171'; }
+      }
+    }).catch(() => {});
+  }
+
+  updateSetupStatus();
+  toggleSetup();
+  addMessage('ai', '✅ Configuration saved! Zoya is now connected to your ZynHR OS workspace.');
+}
+
+// ─── Letterhead ───────────────────────────────────────────────────
+const LH_KEY = 'hros_lh_v3';
+const LH_IMG_KEY = 'hros_lh_img_v3';
+const LH_MODE_KEY = 'hros_lh_mode_v3';
+let letterhead = {};
+
+function getLhImage() {
+  try { return localStorage.getItem(LH_IMG_KEY) || null; } catch(e) { return null; }
+}
+function getLhMode() {
+  return localStorage.getItem(LH_MODE_KEY) || 'text';
+}
+
+(function loadLetterhead() {
+  try {
+    const s = localStorage.getItem(LH_KEY);
+    if (s) {
+      letterhead = JSON.parse(s);
+      ['company','address','phone','email','signatory','title'].forEach(f => {
+        const el = document.getElementById(`lh_${f}`);
+        if (el && letterhead[f]) el.value = letterhead[f];
+      });
+      if (letterhead.signatory) {
+        const si = document.getElementById('lh_img_signatory');
+        if (si) si.value = letterhead.signatory;
+      }
+      if (letterhead.title) {
+        const ti = document.getElementById('lh_img_title');
+        if (ti) ti.value = letterhead.title;
+      }
+    }
+    // Restore image if saved
+    const img = getLhImage();
+    if (img) {
+      const preview = document.getElementById('lhImgPreviewChat');
+      if (preview) { preview.src = img; preview.style.display = 'block'; }
+    }
+    // Restore tab mode
+    if (getLhMode() === 'image') switchChatLhTab('image');
+  } catch(e) {}
+})();
+
+function saveLetterhead() {
+  letterhead = {
+    company:   document.getElementById('lh_company').value.trim(),
+    address:   document.getElementById('lh_address').value.trim(),
+    phone:     document.getElementById('lh_phone').value.trim(),
+    email:     document.getElementById('lh_email').value.trim(),
+    signatory: document.getElementById('lh_signatory').value.trim(),
+    title:     document.getElementById('lh_title').value.trim()
+  };
+  try {
+    localStorage.setItem(LH_KEY, JSON.stringify(letterhead));
+    localStorage.setItem(LH_MODE_KEY, 'text');
+  } catch(e) {}
+  addMessage('ai', '✅ Text letterhead saved! All PDFs I generate will include your company branding.');
+  toggleSetup();
+}
+
+function switchChatLhTab(mode) {
+  const isText = mode === 'text';
+  document.getElementById('lhTextMode').style.display = isText ? 'block' : 'none';
+  document.getElementById('lhImageMode').style.display = isText ? 'none' : 'block';
+  document.getElementById('lhTabText').style.borderColor = isText ? 'var(--gold)' : 'var(--border2)';
+  document.getElementById('lhTabText').style.color = isText ? 'var(--gold2)' : 'var(--muted2)';
+  document.getElementById('lhTabImage').style.borderColor = !isText ? 'var(--gold)' : 'var(--border2)';
+  document.getElementById('lhTabImage').style.color = !isText ? 'var(--gold2)' : 'var(--muted2)';
+}
+
+function handleChatLhImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 4*1024*1024) { alert('Image too large — please use under 4MB'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._pendingChatLhImg = e.target.result;
+    const preview = document.getElementById('lhImgPreviewChat');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveChatImageLh() {
+  const base64 = window._pendingChatLhImg || getLhImage();
+  if (!base64) { alert('Please upload a letterhead image first.'); return; }
+  const sig = document.getElementById('lh_img_signatory').value.trim();
+  const title = document.getElementById('lh_img_title').value.trim();
+  try {
+    localStorage.setItem(LH_IMG_KEY, base64);
+    localStorage.setItem(LH_MODE_KEY, 'image');
+    letterhead = { ...letterhead, signatory: sig, title, signatory_title: title };
+    localStorage.setItem(LH_KEY, JSON.stringify(letterhead));
+    addMessage('ai', '✅ Image letterhead saved! All PDFs I generate will use your company letterhead as the background.');
+    toggleSetup();
+  } catch(e) {
+    alert('Could not save — image may be too large. Try compressing it first.');
+  }
+}
+
+// ─── Document Intent Detection ────────────────────────────────────
+const DOC_KEYWORDS = [
+  'salary slip', 'payslip', 'pay slip',
+  'salary certificate', 'salary letter',
+  'warning letter', 'warning notice',
+  'termination letter',
+  'noc', 'no objection',
+  'experience letter', 'experience certificate', 'service letter',
+  'generate document', 'create document', 'generate letter', 'create letter'
+];
+
+function isDocumentRequest(text) {
+  const lower = text.toLowerCase();
+  return DOC_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+// ─── Document Generation ─────────────────────────────────────────
+async function generateDocumentFromChat(userMessage) {
+  showTyping();
+  try {
+    const res = await fetch('https://uae-hr-proxy.onrender.com/generate-document', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userMessage,
+        notionToken: config.notionToken,
+        licenseKey: config.licenseKey || ''
+      })
+    });
+
+    removeTyping();
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      addMessage('ai', `⚠️ **Document Generation Error:** ${data.error || 'Something went wrong. Please try again.'}`);
+      return;
+    }
+
+    renderDocumentBubble(data);
+
+  } catch(e) {
+    removeTyping();
+    addMessage('ai', `⚠️ **Error:** ${e.message}`);
+  }
+}
+
+function renderDocumentBubble(data) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  const chatArea = document.getElementById('chatArea');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message ai';
+
+  const docId = `doc_${Date.now()}`;
+  const preview = data.content.slice(0, 400) + (data.content.length > 400 ? '...' : '');
+
+  msgDiv.innerHTML = `
+    <div class="msg-avatar" style="background:linear-gradient(135deg,var(--gold) 0%,#7a5c1e 100%);">🤖</div>
+    <div>
+      <div class="msg-bubble">
+        ✅ I've generated the <strong>${data.docLabel}</strong> for <strong>${data.employeeName}</strong>${data.payPeriod ? ` — <strong>${data.payPeriod}</strong>` : ''}.
+        <div class="doc-bubble">
+          <div class="doc-bubble-header">
+            <span class="doc-bubble-title">📄 ${data.docLabel.toUpperCase()}</span>
+            <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">${data.employeeName} · ${new Date().toLocaleDateString('en-AE')}</span>
+          </div>
+          <div class="doc-bubble-preview">${preview}</div>
+          <div class="doc-bubble-actions">
+            <button class="doc-btn doc-btn-pdf" onclick="downloadDocPDF('${docId}')">⬇ Download PDF with Letterhead</button>
+            <button class="doc-btn doc-btn-copy" onclick="copyDocText('${docId}')">📋 Copy Text</button>
+          </div>
+        </div>
+      </div>
+      <div class="msg-time">${new Date().toLocaleTimeString('en-AE', { hour: '2-digit', minute: '2-digit' })}</div>
+    </div>
+  `;
+
+  // Store content on element for PDF access
+  msgDiv.dataset.docContent = data.content;
+  msgDiv.dataset.docLabel = data.docLabel;
+  msgDiv.dataset.docEmployee = data.employeeName;
+  msgDiv.id = docId;
+
+  chatArea.appendChild(msgDiv);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function downloadDocPDF(docId) {
+  const el = document.getElementById(docId);
+  if (!el) return;
+  const content = el.dataset.docContent;
+  const docLabel = el.dataset.docLabel;
+  const empName = el.dataset.docEmployee;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const lhImg = getLhImage();
+  const lhMode = getLhMode();
+  const lh = letterhead;
+  const sig = { name: lh.signatory || '', title: lh.signatory_title || lh.title || '' };
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const usableW = pageW - margin * 2;
+  let y = margin;
+
+  // ── Shared line renderer ──────────────────────────────────────────
+  function renderLines(lines, topM, botM, isImageMode) {
+    lines.forEach(rawLine => {
+      if (/^-{3,}$/.test(rawLine.trim())) { y += 1.5; return; }
+      if (/\[SIGNATURE\]|\[AUTHORISED SIGNATORY\]/.test(rawLine)) return;
+      if (/^Authorised Signatory:/.test(rawLine.trim())) return;
+      if (/This salary slip has been generated/.test(rawLine)) return;
+      if (/Wage Protection System \(WPS\) regulations/.test(rawLine)) return;
+      if (rawLine.trim() === '') { y += 3; return; }
+
+      const trimmed = rawLine.trim();
+      const isTitle = /^(SALARY SLIP|SALARY CERTIFICATE|WARNING LETTER|TERMINATION LETTER|NO OBJECTION CERTIFICATE|EXPERIENCE LETTER)/.test(trimmed);
+      const isHeader = /^(EMPLOYEE DETAILS|EARNINGS|DEDUCTIONS|NET SALARY PAYABLE|MONTHLY SALARY BREAKDOWN|NATURE OF VIOLATION|TO WHOM IT MAY CONCERN|TO:|SUBJECT:|Dear |WPS:|Employee Acknowledgement)/.test(trimmed);
+
+      const wrapped = doc.splitTextToSize(rawLine, usableW);
+      wrapped.forEach(line => {
+        const lineH = isTitle ? 8 : isHeader ? 6 : 5.5;
+        if (y + lineH > pageH - botM) {
+          if (isImageMode) { doc.addPage(); doc.addImage(lhImg,'PNG',0,0,pageW,pageH); }
+          else {
+            drawFooter(doc, lh, pageW, pageH, margin);
+            doc.addPage();
+            if (lh.company) {
+              doc.setDrawColor(201,168,76); doc.setLineWidth(0.4); doc.line(margin,14,pageW-margin,14);
+              doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(150,120,40);
+              doc.text(lh.company, margin, 11);
+            }
+          }
+          y = topM;
+        }
+        if (isTitle) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
+          doc.text(line.trim(), pageW/2, y, { align:'center' });
+        } else if (isHeader) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+          doc.text(line, margin, y);
+        } else {
+          doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+          doc.text(line, margin, y);
+        }
+        y += lineH;
+      });
+    });
+  }
+
+  // ── Draw signatory block ──────────────────────────────────────────
+  function renderSignatory(botM) {
+    if (!sig.name && !sig.title) return;
+    y += 12;
+    if (y + 22 > pageH - botM) {
+      if (lhImg && lhMode === 'image') { doc.addPage(); doc.addImage(lhImg,'PNG',0,0,pageW,pageH); }
+      else { drawFooter(doc, lh, pageW, pageH, margin); doc.addPage(); }
+      y = 40;
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(20,20,20);
+    doc.text('_________________________________', margin, y); y += 7;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text(sig.name, margin, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(80,80,80);
+    doc.text(sig.title, margin, y);
+    if (lh.company && lhMode !== 'image') { y += 4; doc.text(lh.company, margin, y); }
+  }
+
+  // ── Image letterhead mode ─────────────────────────────────────────
+  if (lhMode === 'image' && lhImg) {
+    const topM = 38, botM = 30;
+    doc.addImage(lhImg, 'PNG', 0, 0, pageW, pageH);
+    y = topM;
+    renderLines(content.split('\n'), topM, botM, true);
+    renderSignatory(botM);
+  } else {
+    // ── Text / no letterhead mode ─────────────────────────────────
+    const hasLH = !!(lh.company);
+    const botM = hasLH ? 20 : 14;
+    if (hasLH) {
+      doc.setDrawColor(201,168,76); doc.setLineWidth(0.8); doc.line(margin,12,pageW-margin,12);
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
+      doc.text(lh.company, margin, 22);
+      const cp = [lh.address, lh.phone, lh.email].filter(Boolean);
+      if (cp.length) { doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100); doc.text(cp.join('  |  '), margin, 28, {maxWidth:usableW}); }
+      doc.setDrawColor(201,168,76); doc.setLineWidth(0.5); doc.line(margin,34,pageW-margin,34);
+      y = 42;
+    } else {
+      doc.setFillColor(15,17,23); doc.rect(0,0,pageW,18,'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+      doc.text('ZynHR OS', margin, 12);
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text('Federal Decree-Law No. 33 of 2021', pageW-margin, 12, {align:'right'});
+      y = 30;
+    }
+    renderLines(content.split('\n'), hasLH ? 20 : margin, botM, false);
+    if (hasLH) renderSignatory(botM);
+    if (hasLH) drawFooter(doc, lh, pageW, pageH, margin);
+    else { doc.setFontSize(8); doc.setTextColor(150); doc.text(`Generated by ZynHR OS · ${new Date().toLocaleDateString('en-AE')}`, margin, pageH-10); }
+  }
+
+  const filename = `${docLabel.replace(/ /g,'_')}_${empName.replace(/ /g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+}
+  const hasLH = !!(lh.company);
+  const margin = 20;
+  const pageW = doc.internal.pageSize.getWidth();
+  const usableW = pageW - margin * 2;
+  const pageH = doc.internal.pageSize.getHeight();
+  let y = margin;
+
+function drawFooter(doc, lh, pageW, pageH, margin) {
+  doc.setDrawColor(201,168,76); doc.setLineWidth(0.4);
+  doc.line(margin, pageH-16, pageW-margin, pageH-16);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(130,130,130);
+  doc.text(lh.company || 'ZynHR OS', margin, pageH-10);
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-AE')} · FDL No. 33 of 2021`, pageW-margin, pageH-10, { align:'right' });
+}
+
+function copyDocText(docId) {
+  const el = document.getElementById(docId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.dataset.docContent).then(() => {
+    const btn = el.querySelector('.doc-btn-copy');
+    if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy Text', 2000); }
+  });
+}
+
+function updateSetupStatus() {
+  const el = document.getElementById('setupStatus');
+  const dot = document.getElementById('statusDot');
+  if (config.notionToken) {
+    el.textContent = '✓ Connected';
+    el.style.color = 'var(--green)';
+    dot.classList.remove('offline');
+  } else {
+    el.textContent = 'Not configured';
+    el.style.color = 'var(--muted)';
+    dot.classList.add('offline');
+  }
+}
+
+// ─── Notion API ───────────────────────────────────────────────────
+// Real Notion database IDs
+const NOTION_COLLECTION_IDS = {
+  employees: '116078c2-4941-4ea3-ade0-47d98d094528',
+  leave: '0c37701c-2c94-41fd-a5cd-616759676287',
+  compliance: '73f1c3bc-b977-4ad9-9fc2-461255fdde48',
+  payroll: '9e05c8c3-a1d1-400e-975c-07e36e6980b6'
+};
+
+async function queryNotionDatabase(dbId, filter = null) {
+  if (!dbId || !config.notionToken) return null;
+  try {
+    const body = { page_size: 50 };
+    if (filter) body.filter = filter;
+
+    const token = config.notionToken.trim();
+    
+    // Use CORS proxy to bypass browser restrictions
+    const notionUrl = `https://api.notion.com/v1/databases/${dbId}/query`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(notionUrl)}`;
+    
+    const res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('Notion API error:', res.status, err);
+      return null;
+    }
+    const data = await res.json();
+    return data.results || [];
+  } catch(e) {
+    console.error('Notion fetch error:', e);
+    return null;
+  }
+}
+
+function extractNotionText(prop) {
+  if (!prop) return '';
+  if (prop.type === 'title') return prop.title?.map(t => t.plain_text).join('') || '';
+  if (prop.type === 'rich_text') return prop.rich_text?.map(t => t.plain_text).join('') || '';
+  if (prop.type === 'select') return prop.select?.name || '';
+  if (prop.type === 'number') return prop.number?.toString() || '';
+  if (prop.type === 'date') return prop.date?.start || '';
+  if (prop.type === 'email') return prop.email || '';
+  if (prop.type === 'formula') {
+    const f = prop.formula;
+    if (f?.type === 'number') return f.number?.toString() || '';
+    if (f?.type === 'string') return f.string || '';
+    if (f?.type === 'date') return f.date?.start || '';
+  }
+  return '';
+}
+
+async function fetchNotionContext(userMessage) {
+  const msg = userMessage.toLowerCase();
+  let context = '';
+
+  // Use config DB IDs if provided, otherwise use known collection IDs
+  const empDb = config.empDbId || NOTION_COLLECTION_IDS.employees;
+  const leaveDb = config.leaveDbId || NOTION_COLLECTION_IDS.leave;
+  const compDb = config.compDbId || NOTION_COLLECTION_IDS.compliance;
+  const payDb = config.payDbId || NOTION_COLLECTION_IDS.payroll;
+
+  // Compliance check
+  if ((msg.includes('compliance') || msg.includes('expir') || msg.includes('visa') || msg.includes('passport') || msg.includes('critical')) && config.notionToken) {
+    const records = await queryNotionDatabase(compDb, {
+      or: [
+        { property: 'Status', select: { equals: 'Critical' } },
+        { property: 'Status', select: { equals: 'Expired' } },
+        { property: 'Status', select: { equals: 'Expiring Soon' } }
+      ]
+    });
+    if (records && records.length > 0) {
+      context += '\n\n📋 LIVE COMPLIANCE DATA FROM NOTION:\n';
+      records.forEach(r => {
+        const props = r.properties;
+        const name = extractNotionText(props['Employee Name'] || props['Name'] || props[Object.keys(props)[0]]);
+        const docType = extractNotionText(props['Document Type'] || props['Type']);
+        const status = extractNotionText(props['Status']);
+        const expiry = extractNotionText(props['Expiry Date'] || props['Expiry']);
+        const days = extractNotionText(props['Days Remaining'] || props['Days']);
+        context += `- ${name}: ${docType} | Status: ${status} | Expiry: ${expiry} | Days remaining: ${days}\n`;
+      });
+    } else if (records) {
+      context += '\n\n✅ LIVE COMPLIANCE DATA: No critical or expired compliance items found.';
+    }
+  }
+
+  // Employee data
+  if ((msg.includes('employee') || msg.includes('staff') || msg.includes('team') || msg.includes('how many') || msg.includes('who')) && config.notionToken) {
+    const records = await queryNotionDatabase(empDb, {
+      property: 'Status',
+      status: { equals: 'Active' }
+    });
+    if (records && records.length > 0) {
+      context += `\n\n👥 LIVE EMPLOYEE DATA FROM NOTION (${records.length} active employees):\n`;
+      records.slice(0, 20).forEach(r => {
+        const props = r.properties;
+        const name = extractNotionText(props['Full Name'] || props['Employee Name'] || props['Name'] || props[Object.keys(props)[0]]);
+        const position = extractNotionText(props['Designation'] || props['Position'] || props['Job Title']);
+        const dept = extractNotionText(props['Department']);
+        const status = extractNotionText(props['Status']);
+        if (name) context += `- ${name}${position ? ' | ' + position : ''}${dept ? ' | ' + dept : ''}${status ? ' | ' + status : ''}\n`;
+      });
+      if (records.length > 20) context += `... and ${records.length - 20} more employees.\n`;
+    }
+  }
+
+  // Leave requests
+  if ((msg.includes('leave') || msg.includes('annual') || msg.includes('pending') || msg.includes('balance') || msg.includes('request')) && config.notionToken) {
+    const records = await queryNotionDatabase(leaveDb, {
+      property: 'Approval Status',
+      select: { equals: 'Pending' }
+    });
+    if (records && records.length > 0) {
+      context += `\n\n🏖️ PENDING LEAVE REQUESTS FROM NOTION (${records.length} pending):\n`;
+      records.forEach(r => {
+        const props = r.properties;
+        const name = extractNotionText(props['Leave Request'] || props['Name'] || props[Object.keys(props)[0]]);
+        const type = extractNotionText(props['Leave Type']);
+        const start = extractNotionText(props['Start Date']);
+        const end = extractNotionText(props['End Date']);
+        context += `- ${name}: ${type} | ${start} to ${end} | PENDING APPROVAL\n`;
+      });
+    } else if (records) {
+      context += '\n\n🏖️ LEAVE DATA: No pending leave requests found.';
+    }
+  }
+
+  // Payroll
+  if ((msg.includes('payroll') || msg.includes('salary') || msg.includes('wps') || msg.includes('pay')) && config.notionToken) {
+    const records = await queryNotionDatabase(payDb);
+    if (records && records.length > 0) {
+      context += `\n\n💰 PAYROLL DATA FROM NOTION (${records.length} records):\n`;
+      records.slice(0, 10).forEach(r => {
+        const props = r.properties;
+        const name = extractNotionText(props['Employee Name'] || props['Name'] || props[Object.keys(props)[0]]);
+        const basic = extractNotionText(props['Basic Salary'] || props['Basic']);
+        const net = extractNotionText(props['Net Salary'] || props['Net']);
+        const wps = extractNotionText(props['WPS Status'] || props['Status']);
+        if (name) context += `- ${name}: Basic AED ${basic} | Net AED ${net} | WPS: ${wps}\n`;
+      });
+    }
+  }
+
+  return context;
+}
+
+// ─── System Prompt ────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are an expert Zoya — ZynHR AI Assistant with 15 years of experience in UAE human resources and employment law. You work inside a company's Notion-based HR Operating System.
+
+CRITICAL INSTRUCTION: When the user's message contains a section labeled [LIVE NOTION WORKSPACE DATA], you MUST use that data to answer the question. That data is real, live information pulled directly from the company's Notion databases. Never say you cannot access Notion data — it is already provided to you inside the message. Always reference specific names, numbers, and records from that data in your answer.
+
+YOUR EXPERTISE:
+- Federal Decree-Law No. 33 of 2021 (UAE Labour Law) — all articles
+- MOHRE regulations and WPS (Wage Protection System)
+- End of Service (EOS) gratuity calculations per Article 51
+- Leave entitlements: Annual (30 days), Sick (90 days), Maternity (60 days), Paternity (5 days), Hajj (30 days), Bereavement (5 days), Emergency (3 days)
+- Notice periods: minimum 30 days, up to 90 days
+- Probation rules: maximum 6 months (Article 9)
+- Disciplinary procedures: Article 39
+- Termination with notice: Article 42
+- Summary dismissal grounds: Article 44
+- Emiratisation (Nafis) requirements
+- Visa, Labour Card, Emirates ID, Health Insurance compliance
+- WPS SIF file submission requirements
+
+GRATUITY FORMULA (Art. 51):
+- First 5 years: 21 days basic salary per year
+- After 5 years: 30 days basic salary per year
+- Based on BASIC salary only (not gross)
+- Capped at 2 years total gross salary
+- Example: AED 10,000 basic × 5 years = AED 10,000/30×21×5 = AED 35,000
+
+RESPONSE STYLE:
+- Be direct, practical, and specific
+- Always cite the relevant UAE law article when answering legal questions
+- Use AED for all monetary amounts
+- Use DD/MM/YYYY for dates
+- When live Notion data is provided, reference it specifically by name
+- Keep responses concise but complete
+- Use bullet points for lists
+- Flag urgent compliance issues clearly with ⚠️
+- Never give generic answers when specific data is available
+- NEVER say you cannot access Notion — the data is already in the message`;
+
+// ─── Chat Functions ───────────────────────────────────────────────
+function addMessage(role, content) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  const chatArea = document.getElementById('chatArea');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${role}`;
+
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-AE', { hour: '2-digit', minute: '2-digit' });
+
+  const avatar = role === 'ai' ? '🤖' : '👤';
+  const formattedContent = formatMessage(content);
+
+  msgDiv.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div>
+      <div class="msg-bubble">${formattedContent}</div>
+      <div class="msg-time">${time}</div>
+    </div>
+  `;
+
+  chatArea.appendChild(msgDiv);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return msgDiv;
+}
+
+function formatMessage(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li><strong></strong>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+function showTyping() {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'typing-indicator';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="msg-avatar" style="background:linear-gradient(135deg,var(--gold) 0%,#7a5c1e 100%);">🤖</div>
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  `;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function quickSend(text) {
+  document.getElementById('messageInput').value = text;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+async function sendMessage() {
+  if (isTyping) return;
+
+  const input = document.getElementById('messageInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!config.notionToken) {
+    addMessage('ai', '⚠️ Please configure your **Notion Integration Token** in the settings panel above to get started.');
+    toggleSetup();
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  isTyping = true;
+
+  addMessage('user', text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  // ── Document generation intent ────────────────────────────────
+  if (isDocumentRequest(text)) {
+    isTyping = true;
+    document.getElementById('sendBtn').disabled = true;
+    await generateDocumentFromChat(text);
+    document.getElementById('sendBtn').disabled = false;
+    isTyping = false;
+    return;
+  }
+
+  showTyping();
+
+  try {
+    // Call Render proxy — it handles both Notion and Groq
+    const res = await fetch('https://uae-hr-proxy.onrender.com/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        notionToken: config.notionToken,
+        empDbId: config.empDbId || '',
+        leaveDbId: config.leaveDbId || '',
+        compDbId: config.compDbId || '',
+        payDbId: config.payDbId || '',
+        history: conversationHistory.slice(-10).slice(0, -1),
+        licenseKey: config.licenseKey || ''
+      })
+    });
+
+    removeTyping();
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server error ${res.status} — ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    const reply = data.reply || 'Sorry, I could not generate a response.';
+
+    conversationHistory.push({ role: 'assistant', content: reply });
+
+    // Keep history manageable
+    if (conversationHistory.length > 20) {
+      conversationHistory = conversationHistory.slice(-16);
+    }
+
+    addMessage('ai', reply);
+
+  } catch(e) {
+    removeTyping();
+    addMessage('ai', `⚠️ **Error:** ${e.message}\n\nProxy URL: https://uae-hr-proxy.onrender.com/chat\n\nIf this is a network error, the proxy may be starting up — wait 60 seconds and try again.`);
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+    isTyping = false;
+  }
+}
+
+// Update status on load
+updateSetupStatus();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</body>
+</html>

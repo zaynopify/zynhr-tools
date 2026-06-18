@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZynHR OS Analytics</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #6ee7b7;
+    --gold: #c9a84c;
+    --gold2: #e0c878;
+    --text: #e8eaf6;
+    --muted: #7c85b0;
+    --danger: #f87171;
+    --orange: #fb923c;
+    --radius: 10px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .header-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .header-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .header-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .last-updated { font-size: 11px; color: var(--muted); }
+  .btn-refresh {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--accent2); font-size: 12px; font-weight: 600;
+    padding: 7px 14px; border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; transition: border-color .15s;
+  }
+  .btn-refresh:hover { border-color: var(--accent2); }
+  .btn-refresh.spinning .refresh-icon { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Settings ── */
+  .settings-toggle {
+    font-size: 11px; color: var(--muted); cursor: pointer;
+    padding: 7px 12px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .settings-panel {
+    display: none;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .settings-panel.show { display: flex; }
+  .settings-panel label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .settings-panel input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 12px; font-size: 12.5px;
+    color: var(--text); font-family: var(--font); flex: 1; min-width: 220px;
+  }
+  .btn-save {
+    background: var(--accent); color: #fff; border: none;
+    padding: 8px 16px; border-radius: 7px; font-size: 12.5px;
+    font-weight: 600; cursor: pointer;
+  }
+
+  /* ── Container ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px 20px 40px; }
+
+  /* ── Status messages ── */
+  .status-bar, .error-bar {
+    display: none; align-items: center; gap: 10px;
+    border-radius: var(--radius); padding: 14px 18px;
+    font-size: 13px; margin-bottom: 16px;
+  }
+  .status-bar.show { display: flex; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+  .error-bar.show { display: flex; background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.3); color: var(--danger); }
+  .spinner {
+    width: 16px; height: 16px; flex-shrink: 0;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+
+  /* ── Stat cards ── */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 1000px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+  }
+  .stat-value { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1.1; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-sub { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .stat-card.warn .stat-value { color: var(--danger); }
+  .stat-card.good .stat-value { color: var(--accent2); }
+  .stat-card.gold .stat-value { color: var(--gold2); }
+
+  /* ── Chart grid ── */
+  .charts-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 760px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .chart-title .count-badge {
+    margin-left: auto; font-size: 11px; font-weight: 700;
+    color: var(--accent2); background: rgba(110,231,183,.08);
+    border: 1px solid rgba(110,231,183,.2); border-radius: 20px;
+    padding: 2px 10px;
+  }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap.tall { height: 280px; }
+  .empty-note {
+    text-align: center; color: var(--muted); font-size: 12.5px;
+    padding: 40px 0;
+  }
+
+  /* ── Legend ── */
+  .legend-row {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;
+    font-size: 11.5px; color: var(--muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📊</div>
+  <div>
+    <div class="header-title">ZynHR OS Analytics</div>
+    <div class="header-sub">Live data · ZynHR OS · Federal Decree-Law No. 33 of 2021</div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated"></span>
+    <span class="settings-toggle" onclick="toggleSettings()">⚙ Settings</span>
+    <button class="btn-refresh" id="refreshBtn" onclick="loadAnalytics()">
+      <span class="refresh-icon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="settings-panel" id="settingsPanel">
+  <label>Notion Token</label>
+  <input type="password" id="notionToken" placeholder="secret_... (only needed if not pre-configured on the server)" />
+  <button class="btn-save" onclick="saveToken()">Save</button>
+</div>
+
+<div class="container">
+
+  <div class="status-bar" id="statusBar">
+    <div class="spinner"></div>
+    <span>Loading live data from your HR OS...</span>
+  </div>
+  <div class="error-bar" id="errorBar">
+    <span>⚠️</span>
+    <span id="errorText">Could not load data.</span>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <!-- Row 1: Headcount + Leave -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">👥 Headcount by Status <span class="count-badge" id="headcountTotal">–</span></div>
+      <div class="chart-wrap"><canvas id="chartHeadcount"></canvas></div>
+      <div class="legend-row" id="legendHeadcount"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🏖️ Leave Requests by Status <span class="count-badge" id="leaveTotal">–</span></div>
+      <div class="chart-wrap"><canvas id="chartLeave"></canvas></div>
+      <div class="legend-row" id="legendLeave"></div>
+    </div>
+  </div>
+
+  <!-- Row 2: Compliance + Performance -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">🚨 Compliance Health <span class="count-badge" id="complianceTotal">–</span></div>
+      <div class="chart-wrap"><canvas id="chartCompliance"></canvas></div>
+      <div class="legend-row" id="legendCompliance"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">📈 Performance Reviews <span class="count-badge" id="performanceTotal">–</span></div>
+      <div class="chart-wrap"><canvas id="chartPerformance"></canvas></div>
+      <div class="legend-row" id="legendPerformance"></div>
+    </div>
+  </div>
+
+  <!-- Row 3: Recruitment full width -->
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <div class="chart-title">🧲 Recruitment Pipeline <span class="count-badge" id="recruitmentTotal">–</span></div>
+      <div class="chart-wrap tall"><canvas id="chartRecruitment"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  const PROXY_BASE = 'https://uae-hr-proxy.onrender.com';
+
+  // ── Color palettes ──────────────────────────────────────────────
+  const COLORS = {
+    'Active': '#6ee7b7', 'Probation': '#c9a84c', 'On leave': '#4f8ef7',
+    'Resigned/Terminated': '#f87171',
+    'Approved': '#6ee7b7', 'Pending': '#c9a84c', 'Rejected': '#f87171', 'Needs Info': '#4f8ef7',
+    'Expired': '#f87171', 'Urgent (≤7d)': '#fb923c', 'Upcoming (≤30d)': '#c9a84c', 'OK': '#6ee7b7',
+    'Completed': '#6ee7b7', 'In Progress': '#4f8ef7', 'Not Started': '#7c85b0', 'Acknowledged': '#c9a84c'
+  };
+  const FALLBACK_COLORS = ['#4f8ef7','#6ee7b7','#c9a84c','#f87171','#fb923c','#a78bfa','#7c85b0'];
+
+  const RECRUITMENT_STAGE_ORDER = [
+    'Applied','Screening','First Interview','Second Interview','Assessment','Offer Sent','Hired','Rejected','Withdrawn'
+  ];
+
+  let charts = {};
+
+  function colorFor(label, index) {
+    return COLORS[label] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  }
+
+  // ── Settings ─────────────────────────────────────────────────────
+  function toggleSettings() {
+    document.getElementById('settingsPanel').classList.toggle('show');
+  }
+  function saveToken() {
+    const val = document.getElementById('notionToken').value.trim();
+    if (val) localStorage.setItem('hros_notion_token', val);
+    loadAnalytics();
+  }
+  function getToken() {
+    const input = document.getElementById('notionToken');
+    const stored = localStorage.getItem('hros_notion_token');
+    if (stored) input.value = stored;
+    return stored || '';
+  }
+
+  // ── UI helpers ───────────────────────────────────────────────────
+  function showStatus(show) {
+    document.getElementById('statusBar').classList.toggle('show', show);
+  }
+  function showError(msg) {
+    document.getElementById('errorText').textContent = msg;
+    document.getElementById('errorBar').classList.add('show');
+  }
+  function hideError() {
+    document.getElementById('errorBar').classList.remove('show');
+  }
+
+  // ── Stat cards ───────────────────────────────────────────────────
+  function renderStats(d) {
+    const headcount = d.headcount || {};
+    const totalEmployees = (headcount['Active']||0) + (headcount['Probation']||0) + (headcount['On leave']||0);
+    const pendingLeave = (d.leave && d.leave['Pending']) || 0;
+    const urgency = d.complianceUrgency || {};
+    const attentionDocs = (urgency['Expired']||0) + (urgency['Urgent (≤7d)']||0) + (urgency['Upcoming (≤30d)']||0);
+    const candidates = (d.totals && d.totals.recruitmentCandidates) || 0;
+    const reviewsCompleted = (d.performanceStatus && d.performanceStatus['Completed']) || 0;
+    const reviewsTotal = (d.totals && d.totals.performanceReviews) || 0;
+    const emir = d.emiratisation || { percent: 0, uaeNationals: 0, totalCurrent: 0 };
+
+    const cards = [
+      { label: 'Total Employees', value: totalEmployees, cls: '' },
+      { label: 'Active Employees', value: headcount['Active'] || 0, cls: 'good' },
+      { label: 'Pending Leave Requests', value: pendingLeave, cls: pendingLeave > 0 ? 'gold' : '' },
+      { label: 'Docs Needing Attention', value: attentionDocs, cls: attentionDocs > 0 ? 'warn' : 'good' },
+      { label: 'Reviews Completed', value: `${reviewsCompleted}/${reviewsTotal}`, cls: '' },
+      { label: 'Emiratisation Rate', value: `${emir.percent}%`, cls: 'gold', sub: `${emir.uaeNationals}/${emir.totalCurrent} UAE Nationals` }
+    ];
+
+    document.getElementById('statsGrid').innerHTML = cards.map(c => `
+      <div class="stat-card ${c.cls}">
+        <div class="stat-value">${c.value}</div>
+        <div class="stat-label">${c.label}</div>
+        ${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ── Generic donut renderer ─────────────────────────────────────
+  function renderDonut(canvasId, legendId, totalId, dataObj, emptyLabel) {
+    const ctx = document.getElementById(canvasId);
+    const entries = Object.entries(dataObj || {}).filter(([,v]) => v > 0);
+    const total = entries.reduce((a,[,v]) => a+v, 0);
+    document.getElementById(totalId).textContent = total;
+
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    if (entries.length === 0) {
+      ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+      document.getElementById(legendId).innerHTML = `<div class="empty-note">${emptyLabel}</div>`;
+      return;
+    }
+
+    const labels = entries.map(([k]) => k);
+    const values = entries.map(([,v]) => v);
+    const colors = labels.map((l,i) => colorFor(l, i));
+
+    charts[canvasId] = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: '#1a1d27', borderWidth: 2 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: (ctx) => `${ctx.label}: ${ctx.raw} (${((ctx.raw/total)*100).toFixed(0)}%)`
+        }}},
+        cutout: '62%'
+      }
+    });
+
+    document.getElementById(legendId).innerHTML = labels.map((l,i) => `
+      <div class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l} (${values[i]})</div>
+    `).join('');
+  }
+
+  // ── Recruitment bar chart (ordered pipeline) ─────────────────────
+  function renderRecruitment(dataObj) {
+    const canvasId = 'chartRecruitment';
+    const ctx = document.getElementById(canvasId);
+    const labels = RECRUITMENT_STAGE_ORDER.filter(stage => (dataObj && dataObj[stage]));
+    const allLabels = labels.length > 0 ? labels : RECRUITMENT_STAGE_ORDER;
+    const values = allLabels.map(l => (dataObj && dataObj[l]) || 0);
+    const total = values.reduce((a,b)=>a+b,0);
+    document.getElementById('recruitmentTotal').textContent = total;
+
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    if (total === 0) {
+      ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+      return;
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: allLabels,
+        datasets: [{ data: values, backgroundColor: '#4f8ef7', borderRadius: 6, maxBarThickness: 46 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: (ctx) => `${ctx.raw} candidate${ctx.raw === 1 ? '' : 's'}`
+        }}},
+        scales: {
+          x: { ticks: { color: '#7c85b0', font: { size: 11 } }, grid: { color: '#2e3350' } },
+          y: { beginAtZero: true, ticks: { color: '#7c85b0', stepSize: 1, precision: 0 }, grid: { color: '#2e3350' } }
+        }
+      }
+    });
+  }
+
+  // ── Main load function ───────────────────────────────────────────
+  async function loadAnalytics() {
+    hideError();
+    showStatus(true);
+    document.getElementById('refreshBtn').classList.add('spinning');
+
+    const token = getToken();
+    let url = `${PROXY_BASE}/analytics`;
+    if (token) url += `?token=${encodeURIComponent(token)}`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || `Server error: ${res.status}`);
+
+      renderStats(data);
+      renderDonut('chartHeadcount', 'legendHeadcount', 'headcountTotal', data.headcount, 'No employee data yet.');
+      renderDonut('chartLeave', 'legendLeave', 'leaveTotal', data.leave, 'No leave requests yet.');
+      renderDonut('chartCompliance', 'legendCompliance', 'complianceTotal', data.complianceUrgency, 'No compliance documents yet.');
+      renderDonut('chartPerformance', 'legendPerformance', 'performanceTotal', data.performanceStatus, 'No performance reviews yet.');
+      renderRecruitment(data.recruitment);
+
+      const dt = new Date(data.generatedAt || Date.now());
+      document.getElementById('lastUpdated').textContent = `Updated ${dt.toLocaleTimeString('en-AE', { hour: '2-digit', minute: '2-digit' })}`;
+
+    } catch (err) {
+      showError(err.message || 'Failed to load analytics. Check your Notion token in Settings, or that the server is awake (free tier can take 30-50s to wake up).');
+    } finally {
+      showStatus(false);
+      document.getElementById('refreshBtn').classList.remove('spinning');
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────
+  getToken();
+  loadAnalytics();
+</script>
+</body>
+</html>

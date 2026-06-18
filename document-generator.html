@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZynHR OS — Document Generator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+  --border: #2e3350; --accent: #4f8ef7; --accent2: #6ee7b7;
+  --gold: #c9a84c; --gold2: #e0c878; --text: #e8eaf6;
+  --muted: #7c85b0; --danger: #f87171; --radius: 10px;
+  --font: 'Segoe UI', system-ui, sans-serif;
+}
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+/* Header */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 14px; }
+.header-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+.header-title { font-size: 16px; font-weight: 700; }
+.header-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.badge { margin-left: auto; font-size: 10px; font-weight: 700; background: rgba(79,142,247,.15); color: var(--accent); border: 1px solid rgba(79,142,247,.3); padding: 3px 10px; border-radius: 20px; }
+
+.container { max-width: 760px; margin: 28px auto; padding: 0 20px 60px; }
+.compliance-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--accent2); background: rgba(110,231,183,.08); border: 1px solid rgba(110,231,183,.2); border-radius: 20px; padding: 3px 10px; margin-bottom: 18px; }
+
+/* Mode Tabs */
+.mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 20px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.mode-tab { padding: 12px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--muted); background: var(--surface); transition: all .15s; }
+.mode-tab.active { background: rgba(79,142,247,.1); color: var(--accent); border-bottom: 2px solid var(--accent); }
+.mode-tab:first-child { border-right: 1px solid var(--border); }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+.card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.card-title .status-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; }
+.status-badge.ok { background: rgba(110,231,183,.12); color: var(--accent2); border: 1px solid rgba(110,231,183,.25); }
+.status-badge.warn { background: rgba(201,168,76,.12); color: var(--gold2); border: 1px solid rgba(201,168,76,.25); }
+
+/* Form Elements */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-1 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field.span2 { grid-column: span 2; }
+@media (max-width: 600px) { .field.span2 { grid-column: span 1; } }
+label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+input, select, textarea {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 9px 12px; font-size: 13px; color: var(--text); font-family: var(--font); width: 100%;
+  transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--muted); }
+select option { background: var(--surface2); }
+textarea { resize: vertical; min-height: 70px; }
+
+/* Token input */
+.token-row { display: flex; gap: 8px; }
+.token-row input { flex: 1; }
+.btn-sm { padding: 9px 16px; border: none; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn-connect { background: var(--accent); color: #fff; }
+.btn-connect:hover { opacity: .9; }
+
+/* Employee pills */
+.emp-loading { font-size: 12px; color: var(--muted); padding: 8px 0; }
+.emp-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.emp-pill { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 12.5px; font-weight: 600; transition: all .15s; }
+.emp-pill:hover { border-color: var(--accent); color: var(--accent); }
+.emp-pill.selected { border-color: var(--accent); background: rgba(79,142,247,.12); color: var(--accent); }
+
+/* Doc type buttons */
+.doc-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 500px) { .doc-types { grid-template-columns: repeat(2, 1fr); } }
+.doc-btn { padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; text-align: center; transition: all .15s; }
+.doc-btn:hover { border-color: var(--accent); }
+.doc-btn.selected { border-color: var(--accent); background: rgba(79,142,247,.1); }
+.doc-btn .doc-icon { font-size: 20px; margin-bottom: 4px; }
+.doc-btn .doc-name { font-size: 11.5px; font-weight: 700; color: var(--text); }
+.doc-btn .doc-desc { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* Extra fields */
+.extra-fields { display: none; }
+.extra-fields.show { display: block; }
+
+/* Letterhead */
+.lh-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.lh-tab { padding: 9px; text-align: center; border-radius: 7px; border: 1.5px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); transition: all .15s; }
+.lh-tab.active { border-color: var(--gold); color: var(--gold2); background: rgba(201,168,76,.08); }
+.lh-mode { display: none; }
+.lh-mode.active { display: block; }
+.upload-box { border: 2px dashed var(--border); border-radius: var(--radius); padding: 20px; text-align: center; background: var(--surface2); cursor: pointer; }
+.upload-box:hover { border-color: var(--gold); }
+.upload-box input[type="file"] { display: none; }
+.btn-upload { display: inline-block; margin-top: 8px; background: linear-gradient(135deg, var(--gold), #8b6914); color: #1a0f00; border: none; border-radius: 7px; padding: 8px 18px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.preview-img { max-width: 100%; max-height: 160px; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border); display: none; }
+.preview-img.show { display: block; margin: 10px auto 0; }
+.upload-hint { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+.btn-remove { display: none; margin-top: 8px; background: rgba(248,113,113,.1); color: var(--danger); border: 1px solid rgba(248,113,113,.3); border-radius: 6px; padding: 5px 12px; font-size: 11.5px; cursor: pointer; }
+.btn-remove.show { display: inline-block; }
+
+/* Generate button */
+.btn-generate { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #3a7bd5); color: #fff; font-size: 14px; font-weight: 700; border: none; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; transition: opacity .2s; }
+.btn-generate:hover { opacity: .9; }
+.btn-generate:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Status / error */
+.status-bar { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--muted); align-items: center; gap: 10px; margin-top: 14px; }
+.status-bar.show { display: flex; }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-bar { display: none; background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.3); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--danger); align-items: center; gap: 8px; margin-top: 14px; }
+.error-bar.show { display: flex; }
+
+/* Preview */
+.preview-card { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 14px; }
+.preview-card.show { display: block; }
+.preview-header { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.preview-header-left { font-size: 13px; font-weight: 700; }
+.preview-actions { display: flex; gap: 8px; }
+.btn-action { padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.btn-pdf { background: linear-gradient(135deg, var(--accent2), #10b981); color: #0a1a12; }
+.btn-copy { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+.btn-regen { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+.doc-preview { padding: 24px; font-size: 13px; line-height: 1.85; white-space: pre-wrap; max-height: 480px; overflow-y: auto; }
+
+/* Divider */
+.divider { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 11px; color: var(--muted); }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Save button */
+.btn-save { background: linear-gradient(135deg, var(--gold), #8b6914); color: #1a0f00; border: none; border-radius: 7px; padding: 9px 20px; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-top: 12px; }
+.btn-save:hover { opacity: .9; }
+.saved-note { display: none; font-size: 12px; color: var(--accent2); margin-top: 8px; }
+.saved-note.show { display: block; }
+
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📄</div>
+  <div>
+    <div class="header-title">ZynHR OS — Document Generator</div>
+    <div class="header-sub">Powered by Zoya AI · Federal Decree-Law No. 33 of 2021</div>
+  </div>
+  <div class="badge">AI POWERED</div>
+</div>
+
+<div class="container">
+  <div class="compliance-tag">✅ UAE Labour Law Compliant · MOHRE Standards</div>
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <div class="mode-tab active" id="tab_smart" onclick="switchMode('smart')">⚡ Smart Mode <span style="font-size:10px;font-weight:400;display:block;color:var(--muted)">Auto-fetch from Notion</span></div>
+    <div class="mode-tab" id="tab_manual" onclick="switchMode('manual')">✍️ Manual Mode <span style="font-size:10px;font-weight:400;display:block;color:var(--muted)">Type details yourself</span></div>
+  </div>
+
+  <!-- ── SMART MODE ─────────────────────────────────── -->
+  <div id="mode_smart">
+
+    <!-- Notion Connection -->
+    <div class="card" id="card_connection">
+      <div class="card-title">🔗 Notion Connection <span class="status-badge warn" id="conn_badge">NOT CONNECTED</span></div>
+      <div class="field">
+        <label>Notion Integration Token</label>
+        <div class="token-row">
+          <input type="password" id="notion_token" placeholder="secret_xxxxxxxxxxxxxxxxxxxx" />
+          <button class="btn-sm btn-connect" onclick="connectNotion()">Connect</button>
+        </div>
+        <div class="emp-loading" id="conn_hint" style="display:none;"></div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>ZynHR OS License Key</label>
+        <div class="token-row">
+          <input type="text" id="license_key" placeholder="ZAYN-2026-XXXX-XXXX" />
+          <button class="btn-sm btn-connect" onclick="saveLicenseKey()" style="background:var(--gold);color:#000;">Activate</button>
+        </div>
+        <div class="emp-loading" id="license_hint" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Employee Selection -->
+    <div class="card" id="card_employee" style="display:none;">
+      <div class="card-title">👤 Select Employee</div>
+      <div class="emp-loading" id="emp_loading">Loading employees from Notion...</div>
+      <div class="emp-pills" id="emp_pills"></div>
+    </div>
+
+    <!-- Document Type -->
+    <div class="card" id="card_doctype" style="display:none;">
+      <div class="card-title">📄 Select Document Type</div>
+      <div class="doc-types" id="smart_doc_types">
+        <div class="doc-btn" data-type="salary_slip" onclick="selectDocType(this,'salary_slip')"><div class="doc-icon">💰</div><div class="doc-name">Salary Slip</div><div class="doc-desc">Monthly payslip</div></div>
+        <div class="doc-btn" data-type="salary_certificate" onclick="selectDocType(this,'salary_certificate')"><div class="doc-icon">📋</div><div class="doc-name">Salary Certificate</div><div class="doc-desc">Bank / visa use</div></div>
+        <div class="doc-btn" data-type="warning_letter" onclick="selectDocType(this,'warning_letter')"><div class="doc-icon">⚠️</div><div class="doc-name">Warning Letter</div><div class="doc-desc">First / final warning</div></div>
+        <div class="doc-btn" data-type="termination_letter" onclick="selectDocType(this,'termination_letter')"><div class="doc-icon">🔴</div><div class="doc-name">Termination Letter</div><div class="doc-desc">Employment termination</div></div>
+        <div class="doc-btn" data-type="noc_letter" onclick="selectDocType(this,'noc_letter')"><div class="doc-icon">✈️</div><div class="doc-name">NOC Letter</div><div class="doc-desc">No objection certificate</div></div>
+        <div class="doc-btn" data-type="experience_letter" onclick="selectDocType(this,'experience_letter')"><div class="doc-icon">🎓</div><div class="doc-name">Experience Letter</div><div class="doc-desc">Service proof</div></div>
+      </div>
+    </div>
+
+    <!-- Extra Fields (doc-specific) -->
+    <div class="card extra-fields" id="card_extra">
+      <div class="card-title" id="extra_title">📝 Additional Details</div>
+      <div id="extra_content"></div>
+    </div>
+
+    <!-- Letterhead -->
+    <div class="card" id="card_letterhead_smart">
+      <div class="card-title">🏢 Company Letterhead <span class="status-badge ok" id="lh_badge_smart" style="display:none;">SAVED</span></div>
+      <div class="lh-tabs">
+        <div class="lh-tab active" id="lhTab_text" onclick="switchLhTab('text')">✍️ Text Letterhead</div>
+        <div class="lh-tab" id="lhTab_image" onclick="switchLhTab('image')">🖼️ Upload Image</div>
+      </div>
+      <div class="lh-mode active" id="lhMode_text">
+        <div class="grid-2">
+          <div class="field"><label>Company Name</label><input id="lh_company" placeholder="e.g. Al Fajr Trading LLC" /></div>
+          <div class="field"><label>Address</label><input id="lh_address" placeholder="e.g. Office 412, Business Bay, Dubai" /></div>
+          <div class="field"><label>Phone</label><input id="lh_phone" placeholder="e.g. +971 4 123 4567" /></div>
+          <div class="field"><label>Email</label><input id="lh_email" placeholder="e.g. hr@company.com" /></div>
+          <div class="field"><label>HR Signatory Name</label><input id="lh_signatory" placeholder="e.g. Fatima Al Zaabi" /></div>
+          <div class="field"><label>Signatory Title</label><input id="lh_signatory_title" placeholder="e.g. HR Manager" /></div>
+        </div>
+        <button class="btn-save" onclick="saveLetterhead()">💾 Save Letterhead</button>
+      </div>
+      <div class="lh-mode" id="lhMode_image">
+        <div class="upload-box" onclick="document.getElementById('lhImageFile').click()">
+          <div style="font-size:28px;">🖼️</div>
+          <div style="font-size:13px;font-weight:600;margin-top:6px;">Upload Company Letterhead</div>
+          <label class="btn-upload">Choose Image (PNG/JPG)</label>
+          <input type="file" id="lhImageFile" accept="image/png,image/jpeg,image/jpg" onchange="handleLhImage(event)" />
+        </div>
+        <div class="upload-hint">📐 Best: A4 size PNG from Canva · Design your letterhead there, export, upload here · Saved on this device forever</div>
+        <img id="lhImagePreview" class="preview-img" alt="Letterhead preview" />
+        <br><button class="btn-remove" id="btnRemoveImg" onclick="removeLhImage()">✕ Remove Image</button>
+        <div class="grid-2" style="margin-top:14px;">
+          <div class="field"><label>Signatory Name</label><input id="lh_img_signatory" placeholder="e.g. Fatima Al Zaabi" /></div>
+          <div class="field"><label>Signatory Title</label><input id="lh_img_signatory_title" placeholder="e.g. HR Manager" /></div>
+        </div>
+        <button class="btn-save" onclick="saveImageLh()">💾 Save Image Letterhead</button>
+      </div>
+      <div class="saved-note" id="lh_saved_note">✅ Letterhead saved — applied to all PDFs</div>
+    </div>
+
+    <button class="btn-generate" id="btn_smart_generate" onclick="smartGenerate()" disabled>⚡ Generate Document & Download PDF</button>
+  </div>
+
+  <!-- ── MANUAL MODE ────────────────────────────────── -->
+  <div id="mode_manual" style="display:none;">
+    <div class="card">
+      <div class="card-title">📄 Select Document Type</div>
+      <div class="doc-types">
+        <div class="doc-btn selected" data-type="warning" onclick="selectManualDocType(this,'warning')"><div class="doc-icon">⚠️</div><div class="doc-name">Warning Letter</div></div>
+        <div class="doc-btn" data-type="termination" onclick="selectManualDocType(this,'termination')"><div class="doc-icon">🔴</div><div class="doc-name">Termination Letter</div></div>
+        <div class="doc-btn" data-type="salary_certificate" onclick="selectManualDocType(this,'salary_certificate')"><div class="doc-icon">📋</div><div class="doc-name">Salary Certificate</div></div>
+        <div class="doc-btn" data-type="salary_slip" onclick="selectManualDocType(this,'salary_slip')"><div class="doc-icon">💰</div><div class="doc-name">Salary Slip</div></div>
+        <div class="doc-btn" data-type="noc" onclick="selectManualDocType(this,'noc')"><div class="doc-icon">✈️</div><div class="doc-name">NOC Letter</div></div>
+        <div class="doc-btn" data-type="experience" onclick="selectManualDocType(this,'experience')"><div class="doc-icon">🎓</div><div class="doc-name">Experience Letter</div></div>
+      </div>
+    </div>
+    <div id="manual_form_area"></div>
+    <button class="btn-generate" onclick="manualGenerate()">✨ Generate Document</button>
+  </div>
+
+  <!-- Shared: Status / Error / Preview -->
+  <div class="status-bar" id="statusBar"><div class="spinner"></div><span id="statusText">Generating...</span></div>
+  <div class="error-bar" id="errorBar"><span>⚠️</span><span id="errorText"></span></div>
+  <div class="preview-card" id="previewCard">
+    <div class="preview-header">
+      <div class="preview-header-left">📄 Generated Document</div>
+      <div class="preview-actions">
+        <button class="btn-action btn-regen" onclick="regenerate()">↺ Regenerate</button>
+        <button class="btn-action btn-copy" onclick="copyDoc()">📋 Copy</button>
+        <button class="btn-action btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+      </div>
+    </div>
+    <div class="doc-preview" id="docPreview"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const PROXY = 'https://uae-hr-proxy.onrender.com';
+const LH_KEY = 'hros_lh_v3';
+const LH_IMG_KEY = 'hros_lh_img_v3';
+const LH_MODE_KEY = 'hros_lh_mode_v3';
+const TOKEN_KEY = 'hros_notion_token';
+const LICENSE_KEY = 'hros_license_key';
+
+function getLicenseKey() {
+  const stored = localStorage.getItem(LICENSE_KEY);
+  const el = document.getElementById('license_key');
+  if (stored && el) el.value = stored;
+  return stored || '';
+}
+
+async function saveLicenseKey() {
+  const key = document.getElementById('license_key').value.trim();
+  if (!key) { alert('Please enter your license key.'); return; }
+  const hint = document.getElementById('license_hint');
+  hint.style.display = 'block';
+  hint.textContent = 'Validating license key...';
+  try {
+    const res = await fetch(`${PROXY}/validate-license`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Invalid key');
+    localStorage.setItem(LICENSE_KEY, key);
+    hint.textContent = `✅ ${data.message} | Docs: ${data.usage.docs.remaining} remaining this month`;
+    hint.style.color = 'var(--accent2)';
+  } catch(e) {
+    hint.textContent = `❌ ${e.message}`;
+    hint.style.color = 'var(--danger)';
+  }
+}
+
+let currentMode = 'smart';
+let selectedEmployee = null;
+let selectedDocType = null;
+let manualDocType = 'warning';
+let generatedText = '';
+let employees = [];
+let lastGenType = 'smart';
+
+// ── Mode ──────────────────────────────────────────────────────────
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab_smart').classList.toggle('active', mode === 'smart');
+  document.getElementById('tab_manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('mode_smart').style.display = mode === 'smart' ? 'block' : 'none';
+  document.getElementById('mode_manual').style.display = mode === 'manual' ? 'block' : 'none';
+  hideResults();
+}
+
+// ── Notion Connection ─────────────────────────────────────────────
+async function connectNotion() {
+  const token = document.getElementById('notion_token').value.trim();
+  if (!token) { showError('Please enter your Notion Integration Token.'); return; }
+  const hint = document.getElementById('conn_hint');
+  hint.style.display = 'block';
+  hint.textContent = 'Connecting to Notion...';
+  hideError();
+  try {
+    const res = await fetch(`${PROXY}/analytics?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Connection failed');
+    localStorage.setItem(TOKEN_KEY, token);
+    document.getElementById('conn_badge').textContent = '✅ CONNECTED';
+    document.getElementById('conn_badge').className = 'status-badge ok';
+    hint.textContent = `✅ Connected — ${data.totals?.employees || 0} employees found`;
+    await loadEmployees(token);
+  } catch(e) {
+    hint.textContent = '';
+    showError(`Connection failed: ${e.message}`);
+  }
+}
+
+async function loadEmployees(token) {
+  document.getElementById('card_employee').style.display = 'block';
+  document.getElementById('emp_loading').style.display = 'block';
+  document.getElementById('emp_pills').innerHTML = '';
+  try {
+    const res = await fetch(`${PROXY}/analytics?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    // Get employee names from headcount data — but we need actual names
+    // Use the /generate-document endpoint to get employee list via a names-only call
+    const empRes = await fetch(`${PROXY}/list-employees?token=${encodeURIComponent(token)}`);
+    if (empRes.ok) {
+      const empData = await empRes.json();
+      employees = empData.employees || [];
+    } else {
+      // Fallback: use known employees from the headcount totals
+      employees = [
+        { name: 'Mohammed', status: 'Active' },
+        { name: 'Khalifa', status: 'Active' },
+        { name: 'Saleh', status: 'Probation' },
+        { name: 'Mathew', status: 'Active' },
+        { name: 'Zaynab', status: 'Active' },
+      ];
+    }
+    renderEmployeePills();
+  } catch(e) {
+    document.getElementById('emp_loading').textContent = 'Could not load employees. Using cached list.';
+    employees = ['Mohammed','Khalifa','Saleh','Mathew','Zaynab'].map(n => ({ name: n, status: 'Active' }));
+    renderEmployeePills();
+  }
+  document.getElementById('card_doctype').style.display = 'block';
+}
+
+function renderEmployeePills() {
+  document.getElementById('emp_loading').style.display = 'none';
+  const pills = document.getElementById('emp_pills');
+  pills.innerHTML = employees.map(e =>
+    `<div class="emp-pill" data-name="${e.name}" onclick="selectEmployee(this, '${e.name}')">${e.name} <span style="font-size:10px;color:var(--muted)">${e.status || ''}</span></div>`
+  ).join('');
+}
+
+function selectEmployee(el, name) {
+  document.querySelectorAll('.emp-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedEmployee = name;
+  checkSmartReady();
+}
+
+// ── Document Type ──────────────────────────────────────────────────
+function selectDocType(el, type) {
+  document.querySelectorAll('#smart_doc_types .doc-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedDocType = type;
+  renderExtraFields(type);
+  checkSmartReady();
+}
+
+function renderExtraFields(type) {
+  const card = document.getElementById('card_extra');
+  const content = document.getElementById('extra_content');
+  const title = document.getElementById('extra_title');
+  let html = '';
+
+  if (type === 'salary_slip') {
+    title.textContent = '📅 Pay Period';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const year = new Date().getFullYear();
+    const prevMonth = new Date(); prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const defaultPeriod = `${months[prevMonth.getMonth()]} ${prevMonth.getFullYear()}`;
+    html = `<div class="field"><label>Salary Month</label>
+      <select id="extra_period">
+        ${months.flatMap(m => [year-1, year, year+1].map(y => `<option value="${m} ${y}" ${`${m} ${y}` === defaultPeriod ? 'selected' : ''}>${m} ${y}</option>`)).join('')}
+      </select></div>`;
+    card.classList.add('show');
+  } else if (type === 'salary_certificate') {
+    title.textContent = '📋 Certificate Purpose';
+    html = `<div class="field"><label>Purpose (optional)</label>
+      <select id="extra_purpose">
+        <option value="Bank loan application">Bank loan application</option>
+        <option value="Visa application">Visa application</option>
+        <option value="Tenancy contract">Tenancy contract</option>
+        <option value="Credit card application">Credit card application</option>
+        <option value="General purpose">General purpose</option>
+      </select></div>`;
+    card.classList.add('show');
+  } else if (type === 'warning_letter') {
+    title.textContent = '⚠️ Warning Details';
+    html = `<div class="grid-2">
+      <div class="field"><label>Warning Level</label>
+        <select id="extra_warning_level">
+          <option>First Warning</option><option>Second Warning</option><option>Final Warning</option>
+        </select></div>
+      <div class="field span2"><label>Nature of Violation</label>
+        <textarea id="extra_violation" placeholder="e.g. Repeated absence without prior approval, consistent lateness..."></textarea></div>
+    </div>`;
+    card.classList.add('show');
+  } else if (type === 'termination_letter') {
+    title.textContent = '🔴 Termination Details';
+    html = `<div class="grid-2">
+      <div class="field"><label>Termination Type</label>
+        <select id="extra_term_type">
+          <option>Termination with Notice</option>
+          <option>Immediate Termination (Gross Misconduct)</option>
+          <option>Redundancy / Business Closure</option>
+          <option>End of Contract</option>
+        </select></div>
+      <div class="field span2"><label>Reason</label>
+        <textarea id="extra_reason" placeholder="e.g. Persistent performance issues despite written warnings..."></textarea></div>
+    </div>`;
+    card.classList.add('show');
+  } else if (type === 'noc_letter') {
+    title.textContent = '✈️ NOC Purpose';
+    html = `<div class="field"><label>Purpose of NOC</label>
+      <select id="extra_noc_purpose">
+        <option value="Bank account opening">Bank account opening</option>
+        <option value="Visa application">Visa application</option>
+        <option value="Driving license application">Driving license application</option>
+        <option value="Car loan application">Car loan application</option>
+        <option value="General purpose">General purpose</option>
+      </select></div>`;
+    card.classList.add('show');
+  } else if (type === 'experience_letter') {
+    title.textContent = '🎓 Performance Note (optional)';
+    html = `<div class="field"><label>Overall Performance</label>
+      <select id="extra_conduct">
+        <option>Excellent</option><option>Very Good</option>
+        <option>Good</option><option>Satisfactory</option>
+      </select></div>`;
+    card.classList.add('show');
+  } else {
+    card.classList.remove('show');
+  }
+  content.innerHTML = html;
+}
+
+function getExtraFields() {
+  const extras = {};
+  ['extra_period','extra_purpose','extra_warning_level','extra_violation',
+   'extra_term_type','extra_reason','extra_noc_purpose','extra_conduct'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) extras[id] = el.value;
+  });
+  return extras;
+}
+
+function checkSmartReady() {
+  const ready = selectedEmployee && selectedDocType;
+  document.getElementById('btn_smart_generate').disabled = !ready;
+}
+
+// ── Smart Generate ─────────────────────────────────────────────────
+async function smartGenerate() {
+  hideResults(); hideError();
+  const token = localStorage.getItem(TOKEN_KEY) || document.getElementById('notion_token').value.trim();
+  if (!token) { showError('Please connect to Notion first.'); return; }
+  if (!selectedEmployee) { showError('Please select an employee.'); return; }
+  if (!selectedDocType) { showError('Please select a document type.'); return; }
+
+  showStatus('Fetching data from Notion & generating document...');
+  document.getElementById('btn_smart_generate').disabled = true;
+
+  const extras = getExtraFields();
+  let msgParts = [`Generate a ${selectedDocType.replace(/_/g,' ')} for ${selectedEmployee}`];
+  if (extras.extra_period) msgParts.push(`for ${extras.extra_period}`);
+  if (extras.extra_violation) msgParts.push(`Violation: ${extras.extra_violation}`);
+  if (extras.extra_reason) msgParts.push(`Reason: ${extras.extra_reason}`);
+  if (extras.extra_noc_purpose) msgParts.push(`Purpose: ${extras.extra_noc_purpose}`);
+  if (extras.extra_purpose) msgParts.push(`Purpose: ${extras.extra_purpose}`);
+  if (extras.extra_warning_level) msgParts.push(`Level: ${extras.extra_warning_level}`);
+  if (extras.extra_term_type) msgParts.push(`Type: ${extras.extra_term_type}`);
+  if (extras.extra_conduct) msgParts.push(`Performance: ${extras.extra_conduct}`);
+
+  try {
+    const res = await fetch(`${PROXY}/generate-document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msgParts.join('. '),
+        notionToken: token,
+        employeeName: selectedEmployee,
+        docType: selectedDocType,
+        payPeriod: extras.extra_period || null,
+        licenseKey: getLicenseKey()
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Generation failed');
+    generatedText = data.content;
+    lastGenType = 'smart';
+    hideStatus();
+    showPreview(data.content, `${data.docLabel} — ${data.employeeName}`);
+  } catch(e) {
+    hideStatus();
+    showError(e.message);
+  } finally {
+    document.getElementById('btn_smart_generate').disabled = false;
+  }
+}
+
+// ── Manual Mode ───────────────────────────────────────────────────
+const manualForms = {
+  warning: { title: '⚠️ Warning Letter', fields: [
+    {id:'m_company', label:'Company Name', ph:'e.g. Al Fajr Trading LLC'},
+    {id:'m_empname', label:'Employee Full Name', ph:'e.g. Mohammed Al Rashidi'},
+    {id:'m_jobtitle', label:'Job Title', ph:'e.g. Sales Executive'},
+    {id:'m_empid', label:'Employee ID', ph:'e.g. EMP-0042'},
+    {id:'m_level', label:'Warning Level', type:'select', options:['First Warning','Second Warning','Final Warning']},
+    {id:'m_date', label:'Date', type:'date'},
+    {id:'m_hrname', label:'HR/Manager Name', ph:'e.g. Fatima Al Zaabi'},
+    {id:'m_violation', label:'Nature of Violation', type:'textarea', ph:'Describe the violation...', span2:true},
+  ]},
+  termination: { title: '🔴 Termination Letter', fields: [
+    {id:'m_company', label:'Company Name', ph:'e.g. Al Fajr Trading LLC'},
+    {id:'m_empname', label:'Employee Full Name', ph:'e.g. Ahmed Hassan'},
+    {id:'m_jobtitle', label:'Job Title', ph:'e.g. Sales Manager'},
+    {id:'m_empid', label:'Employee ID', ph:'e.g. EMP-0006'},
+    {id:'m_term_type', label:'Termination Type', type:'select', options:['Termination with Notice','Immediate Termination','Redundancy','End of Contract']},
+    {id:'m_last_day', label:'Last Working Day', type:'date'},
+    {id:'m_notice', label:'Notice Period', ph:'e.g. 30 days'},
+    {id:'m_hrname', label:'HR Signatory', ph:'e.g. Fatima Al Zaabi'},
+    {id:'m_reason', label:'Reason', type:'textarea', ph:'Reason for termination...', span2:true},
+  ]},
+  salary_certificate: { title: '📋 Salary Certificate', fields: [
+    {id:'m_company', label:'Company Name', ph:'e.g. Al Fajr Trading LLC'},
+    {id:'m_empname', label:'Employee Full Name', ph:'e.g. Mohammed Al Rashidi'},
+    {id:'m_jobtitle', label:'Job Title', ph:'e.g. HR Manager'},
+    {id:'m_dept', label:'Department', ph:'e.g. HR'},
+    {id:'m_join', label:'Date of Joining', type:'date'},
+    {id:'m_basic', label:'Basic Salary (AED)', ph:'e.g. 8000'},
+    {id:'m_housing', label:'Housing Allowance (AED)', ph:'e.g. 3000'},
+    {id:'m_transport', label:'Transport Allowance (AED)', ph:'e.g. 1000'},
+    {id:'m_other', label:'Other Allowances (AED)', ph:'e.g. 500'},
+    {id:'m_purpose', label:'Purpose', ph:'e.g. Bank loan application'},
+    {id:'m_hrname', label:'HR Signatory', ph:'e.g. Fatima Al Zaabi'},
+  ]},
+  salary_slip: { title: '💰 Salary Slip', fields: [
+    {id:'m_company', label:'Company Name', ph:'e.g. Al Fajr Trading LLC'},
+    {id:'m_empname', label:'Employee Full Name', ph:'e.g. Mohammed Al Rashidi'},
+    {id:'m_empid', label:'Employee ID', ph:'e.g. EMP-0042'},
+    {id:'m_jobtitle', label:'Job Title', ph:'e.g. HR Manager'},
+    {id:'m_period', label:'Pay Period', ph:'e.g. May 2026'},
+    {id:'m_basic', label:'Basic Salary (AED)', ph:'e.g. 8000'},
+    {id:'m_housing', label:'Housing Allowance (AED)', ph:'e.g. 3000'},
+    {id:'m_transport', label:'Transport Allowance (AED)', ph:'e.g. 1000'},
+    {id:'m_other', label:'Other Allowances (AED)', ph:'e.g. 500'},
+    {id:'m_deductions', label:'Total Deductions (AED)', ph:'e.g. 0'},
+    {id:'m_days', label:'Days Worked', ph:'e.g. 30'},
+  ]},
+  noc: { title: '✈️ NOC Letter', fields: [
+    {id:'m_company', label:'Company Name', ph:'e.g. Al Fajr Trading LLC'},
+    {id:'m_empname', label:'Employee Full Name', ph:'e.g. Mohammed Al Rashidi'},
+    {id:'m_jobtitle', label:'Job Title', ph:'e.g. HR Manager'},
+    {id:'m_nationality', label:'Nationality', ph:'e.g. UAE'},
+    {id:'m_passport', label:'Passport Number', ph:'e.g. A12345678'},
+    {id:'m_join', label:'Date of Joining', type:'date'},
+    {id:'m_purpose', label:'Purpose of NOC', ph:'e.g. Bank account opening'},
+    {id:'m_hrname', label:'HR Signatory', ph:'e.g. Fatima Al Zaabi'},
+  ]},
+  experience: { title: '🎓 Experience Letter', fields: [
+    {id:'m_company', label:'Company Name', ph:'e.g. Al Fajr Trading LLC'},
+    {id:'m_empname', label:'Employee Full Name', ph:'e.g. Ahmed Hassan'},
+    {id:'m_jobtitle', label:'Job Title', ph:'e.g. Sales Manager'},
+    {id:'m_dept', label:'Department', ph:'e.g. Sales'},
+    {id:'m_join', label:'Date of Joining', type:'date'},
+    {id:'m_last_day', label:'Last Working Day', type:'date'},
+    {id:'m_conduct', label:'Performance', type:'select', options:['Excellent','Very Good','Good','Satisfactory']},
+    {id:'m_reason', label:'Reason for Leaving', ph:'e.g. Resignation'},
+    {id:'m_hrname', label:'HR Signatory', ph:'e.g. Fatima Al Zaabi'},
+  ]}
+};
+
+function selectManualDocType(el, type) {
+  document.querySelectorAll('#mode_manual .doc-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  manualDocType = type;
+  renderManualForm(type);
+  hideResults();
+}
+
+function renderManualForm(type) {
+  const def = manualForms[type];
+  if (!def) return;
+  const today = new Date().toISOString().split('T')[0];
+  let html = `<div class="card"><div class="card-title">${def.title}</div><div class="grid-2">`;
+  def.fields.forEach(f => {
+    const spanClass = f.span2 ? ' span2' : '';
+    html += `<div class="field${spanClass}"><label>${f.label}</label>`;
+    if (f.type === 'select') {
+      html += `<select id="${f.id}">${f.options.map(o => `<option>${o}</option>`).join('')}</select>`;
+    } else if (f.type === 'textarea') {
+      html += `<textarea id="${f.id}" placeholder="${f.ph || ''}"></textarea>`;
+    } else if (f.type === 'date') {
+      html += `<input type="date" id="${f.id}" value="${today}" />`;
+    } else {
+      html += `<input type="text" id="${f.id}" placeholder="${f.ph || ''}" />`;
+    }
+    html += `</div>`;
+  });
+  html += `</div></div>`;
+  document.getElementById('manual_form_area').innerHTML = html;
+}
+
+async function manualGenerate() {
+  hideResults(); hideError();
+  const def = manualForms[manualDocType];
+  if (!def) return;
+  const data = {};
+  def.fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) data[f.label] = el.value.trim();
+  });
+  const prompt = `You are a UAE HR expert. Generate a professional, formal ${def.title.replace(/[^a-zA-Z ]/g,'')} compliant with UAE Federal Decree-Law No. 33 of 2021.\n\nDetails:\n${Object.entries(data).map(([k,v]) => `- ${k}: ${v||'N/A'}`).join('\n')}\n\nRequirements:\n- Formal business English\n- Reference UAE Labour Law where appropriate\n- Include [SIGNATURE] placeholder at end\n- Start directly with the document\n\nGenerate now:`;
+  showStatus('Generating document...');
+  try {
+    const res = await fetch(`${PROXY}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: prompt })
+    });
+    const json = await res.json();
+    const text = json.reply || json.message || json.content || '';
+    if (!text) throw new Error('Empty response. Please try again.');
+    generatedText = text;
+    lastGenType = 'manual';
+    hideStatus();
+    showPreview(text, def.title);
+  } catch(e) {
+    hideStatus(); showError(e.message);
+  }
+}
+
+function regenerate() {
+  if (lastGenType === 'smart') smartGenerate();
+  else manualGenerate();
+}
+
+// ── Letterhead ─────────────────────────────────────────────────────
+function getLetterhead() {
+  try { const s = localStorage.getItem(LH_KEY); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
+}
+function getLhMode() { return localStorage.getItem(LH_MODE_KEY) || 'text'; }
+function getLhImage() { try { return localStorage.getItem(LH_IMG_KEY) || null; } catch(e) { return null; } }
+
+function switchLhTab(mode) {
+  ['text','image'].forEach(m => {
+    document.getElementById(`lhTab_${m}`).classList.toggle('active', m === mode);
+    document.getElementById(`lhMode_${m}`).classList.toggle('active', m === mode);
+  });
+}
+
+function saveLetterhead() {
+  const lh = {
+    company: document.getElementById('lh_company').value.trim(),
+    address: document.getElementById('lh_address').value.trim(),
+    phone: document.getElementById('lh_phone').value.trim(),
+    email: document.getElementById('lh_email').value.trim(),
+    signatory: document.getElementById('lh_signatory').value.trim(),
+    signatory_title: document.getElementById('lh_signatory_title').value.trim()
+  };
+  try { localStorage.setItem(LH_KEY, JSON.stringify(lh)); localStorage.setItem(LH_MODE_KEY, 'text'); showLhSaved(); } catch(e) {}
+}
+
+function handleLhImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 4*1024*1024) { alert('File too large — please use under 4MB'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._pendingLhImg = e.target.result;
+    document.getElementById('lhImagePreview').src = e.target.result;
+    document.getElementById('lhImagePreview').classList.add('show');
+    document.getElementById('btnRemoveImg').classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveImageLh() {
+  const base64 = window._pendingLhImg || getLhImage();
+  if (!base64) { alert('Please upload an image first.'); return; }
+  const sig = document.getElementById('lh_img_signatory').value.trim();
+  const title = document.getElementById('lh_img_signatory_title').value.trim();
+  try {
+    localStorage.setItem(LH_IMG_KEY, base64);
+    localStorage.setItem(LH_MODE_KEY, 'image');
+    const lh = getLetterhead(); lh.signatory = sig; lh.signatory_title = title;
+    localStorage.setItem(LH_KEY, JSON.stringify(lh));
+    showLhSaved();
+  } catch(e) { alert('Could not save — image may be too large. Try compressing it first.'); }
+}
+
+function removeLhImage() {
+  try { localStorage.removeItem(LH_IMG_KEY); localStorage.setItem(LH_MODE_KEY, 'text'); } catch(e) {}
+  document.getElementById('lhImagePreview').classList.remove('show');
+  document.getElementById('btnRemoveImg').classList.remove('show');
+  window._pendingLhImg = null;
+  document.getElementById('lhImageFile').value = '';
+}
+
+function showLhSaved() {
+  const badge = document.getElementById('lh_badge_smart');
+  if (badge) badge.style.display = 'inline-block';
+  const note = document.getElementById('lh_saved_note');
+  if (note) { note.classList.add('show'); setTimeout(() => note.classList.remove('show'), 3000); }
+}
+
+function getCurrentSignatory() {
+  const lh = getLetterhead();
+  return { name: lh.signatory || '', title: lh.signatory_title || '' };
+}
+
+// ── PDF Download ───────────────────────────────────────────────────
+function downloadPDF() {
+  if (!generatedText) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const lhMode = getLhMode();
+  const lhImg = getLhImage();
+  const lh = getLetterhead();
+  const sig = getCurrentSignatory();
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const usableW = pageW - margin * 2;
+  let y = margin;
+
+  // ── Shared line renderer ─────────────────────────────────────────
+  function renderLines(lines, topM, botM, isImageMode) {
+    lines.forEach(rawLine => {
+      // Skip noise lines
+      if (/^-{3,}$/.test(rawLine.trim())) { y += 1.5; return; }
+      if (/\[SIGNATURE\]|\[AUTHORISED SIGNATORY\]/.test(rawLine)) return;
+      if (/^Authorised Signatory:/.test(rawLine.trim())) return;
+      if (/This salary slip has been generated/.test(rawLine)) return;
+      if (/Wage Protection System \(WPS\) regulations/.test(rawLine)) return;
+      if (rawLine.trim() === '') { y += 3; return; } // blank line = small gap
+
+      const trimmed = rawLine.trim();
+      const isTitle = /^(SALARY SLIP|SALARY CERTIFICATE|WARNING LETTER|TERMINATION LETTER|NO OBJECTION CERTIFICATE|EXPERIENCE LETTER)/.test(trimmed);
+      const isHeader = /^(EMPLOYEE DETAILS|EARNINGS|DEDUCTIONS|NET SALARY PAYABLE|MONTHLY SALARY BREAKDOWN|NATURE OF VIOLATION|TO WHOM IT MAY CONCERN|TO:|SUBJECT:|Dear |WPS:|Employee Acknowledgement)/.test(trimmed);
+
+      const wrapped = doc.splitTextToSize(rawLine, usableW);
+      wrapped.forEach(line => {
+        const lineH = isTitle ? 8 : isHeader ? 6 : 5.5;
+        if (y + lineH > pageH - botM) {
+          if (isImageMode) { doc.addPage(); doc.addImage(lhImg,'PNG',0,0,pageW,pageH); }
+          else {
+            drawFooter(doc, lh, pageW, pageH, margin);
+            doc.addPage();
+            if (lh.company) {
+              doc.setDrawColor(201,168,76); doc.setLineWidth(0.4); doc.line(margin,14,pageW-margin,14);
+              doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(150,120,40);
+              doc.text(lh.company, margin, 11);
+            }
+          }
+          y = topM;
+        }
+        if (isTitle) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
+          doc.text(line.trim(), pageW/2, y, { align:'center' });
+        } else if (isHeader) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+          doc.text(line, margin, y);
+        } else {
+          doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+          doc.text(line, margin, y);
+        }
+        y += lineH;
+      });
+    });
+  }
+
+  // ── Draw signatory block ─────────────────────────────────────────
+  function renderSignatory(botM) {
+    if (!sig.name && !sig.title) return;
+    // Always place signatory — if not enough room, add new page
+    y += 12;
+    if (y + 22 > pageH - botM) {
+      if (lhImg && lhMode === 'image') { doc.addPage(); doc.addImage(lhImg,'PNG',0,0,pageW,pageH); }
+      else { drawFooter(doc, lh, pageW, pageH, margin); doc.addPage(); }
+      y = 40;
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(20,20,20);
+    doc.text('_________________________________', margin, y); y += 7;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text(sig.name, margin, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(80,80,80);
+    doc.text(sig.title, margin, y);
+    if (lh.company && lhMode !== 'image') { y += 4; doc.text(lh.company, margin, y); }
+  }
+
+  // ── Image letterhead mode ────────────────────────────────────────
+  if (lhMode === 'image' && lhImg) {
+    const topM = 38, botM = 30;
+    doc.addImage(lhImg, 'PNG', 0, 0, pageW, pageH);
+    y = topM;
+    renderLines(generatedText.split('\n'), topM, botM, true);
+    renderSignatory(botM);
+
+  } else {
+    // ── Text / no letterhead mode ────────────────────────────────
+    const hasLH = !!(lh.company);
+    const botM = hasLH ? 20 : 14;
+
+    if (hasLH) {
+      doc.setDrawColor(201,168,76); doc.setLineWidth(0.8); doc.line(margin,12,pageW-margin,12);
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
+      doc.text(lh.company, margin, 22);
+      const cp = [lh.address, lh.phone, lh.email].filter(Boolean);
+      if (cp.length) {
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,100,100);
+        doc.text(cp.join('  |  '), margin, 28, {maxWidth:usableW});
+      }
+      doc.setDrawColor(201,168,76); doc.setLineWidth(0.5); doc.line(margin,34,pageW-margin,34);
+      y = 42;
+    } else {
+      doc.setFillColor(15,17,23); doc.rect(0,0,pageW,18,'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+      doc.text('ZynHR OS', margin, 12);
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text('Federal Decree-Law No. 33 of 2021', pageW-margin, 12, {align:'right'});
+      y = 30;
+    }
+
+    renderLines(generatedText.split('\n'), hasLH ? 20 : margin, botM, false);
+    if (hasLH) renderSignatory(botM);
+    if (hasLH) drawFooter(doc, lh, pageW, pageH, margin);
+    else {
+      doc.setFontSize(8); doc.setTextColor(150);
+      doc.text(`Generated by ZynHR OS · ${new Date().toLocaleDateString('en-AE')}`, margin, pageH-10);
+    }
+  }
+
+  const filename = `HR_Document_${selectedEmployee||'Manual'}_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+}
+
+function drawFooter(doc, lh, pageW, pageH, margin) {
+  doc.setDrawColor(201,168,76); doc.setLineWidth(0.4); doc.line(margin,pageH-16,pageW-margin,pageH-16);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(130,130,130);
+  doc.text(lh.company||'ZynHR OS', margin, pageH-10);
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-AE')} · FDL No. 33 of 2021`, pageW-margin, pageH-10, {align:'right'});
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────
+function showStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusBar').classList.add('show');
+}
+function hideStatus() { document.getElementById('statusBar').classList.remove('show'); }
+function showError(msg) { document.getElementById('errorText').textContent = msg; document.getElementById('errorBar').classList.add('show'); }
+function hideError() { document.getElementById('errorBar').classList.remove('show'); }
+function showPreview(text, label) {
+  document.getElementById('docPreview').textContent = text;
+  document.getElementById('previewCard').classList.add('show');
+  document.getElementById('previewCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function hideResults() {
+  document.getElementById('previewCard').classList.remove('show');
+  document.getElementById('errorBar').classList.remove('show');
+  generatedText = '';
+}
+function copyDoc() {
+  navigator.clipboard.writeText(generatedText).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.innerHTML = '📋 Copy', 2000);
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+(function init() {
+  // Restore Notion token
+  const saved = localStorage.getItem(TOKEN_KEY);
+  if (saved) {
+    document.getElementById('notion_token').value = saved;
+    connectNotion();
+  }
+  // Restore license key
+  getLicenseKey();
+  // Restore letterhead
+  const lh = getLetterhead();
+  if (lh.company) { document.getElementById('lh_company').value = lh.company; document.getElementById('lh_badge_smart').style.display='inline-block'; }
+  if (lh.address) document.getElementById('lh_address').value = lh.address;
+  if (lh.phone) document.getElementById('lh_phone').value = lh.phone;
+  if (lh.email) document.getElementById('lh_email').value = lh.email;
+  if (lh.signatory) { document.getElementById('lh_signatory').value = lh.signatory; document.getElementById('lh_img_signatory').value = lh.signatory; }
+  if (lh.signatory_title) { document.getElementById('lh_signatory_title').value = lh.signatory_title; document.getElementById('lh_img_signatory_title').value = lh.signatory_title; }
+  const lhImg = getLhImage();
+  if (lhImg) { document.getElementById('lhImagePreview').src = lhImg; document.getElementById('lhImagePreview').classList.add('show'); document.getElementById('btnRemoveImg').classList.add('show'); }
+  if (getLhMode() === 'image') switchLhTab('image');
+  // Init manual form
+  renderManualForm('warning');
+  // URL param for manual mode
+  const params = new URLSearchParams(window.location.search);
+  const type = params.get('type');
+  if (type) {
+    switchMode('manual');
+    const btn = document.querySelector(`#mode_manual .doc-btn[data-type="${type}"]`);
+    if (btn) selectManualDocType(btn, type);
+  }
+})();
+</script>
+</body>
+</html>

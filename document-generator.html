@@ -802,7 +802,7 @@ function downloadPDF() {
 
       const wrapped = doc.splitTextToSize(rawLine, usableW);
       wrapped.forEach(line => {
-        const lineH = isTitle ? 8 : isHeader ? 6 : 5.5;
+        const lineH = isTitle ? 10 : isHeader ? 8 : 7;
         if (y + lineH > pageH - botM) {
           if (isImageMode) { doc.addPage(); doc.addImage(lhImg,'PNG',0,0,pageW,pageH); }
           else {
@@ -820,10 +820,10 @@ function downloadPDF() {
           doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,20,20);
           doc.text(line.trim(), pageW/2, y, { align:'center' });
         } else if (isHeader) {
-          doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+          doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,20,20);
           doc.text(line, margin, y);
         } else {
-          doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(20,20,20);
+          doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20,20,20);
           doc.text(line, margin, y);
         }
         y += lineH;

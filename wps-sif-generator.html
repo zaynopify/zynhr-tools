@@ -322,9 +322,40 @@
   <!-- Entry mode -->
   <div class="section-label">Employee Payroll Data</div>
   <div class="entry-tabs">
-    <div class="entry-tab active" id="tab-manual" onclick="switchTab('manual')">✍️ Manual Entry</div>
+    <div class="entry-tab active" id="tab-smart" onclick="switchTab('smart')">🔗 Smart Mode (from Notion)</div>
+    <div class="entry-tab" id="tab-manual" onclick="switchTab('manual')">✍️ Manual Entry</div>
     <div class="entry-tab" id="tab-csv" onclick="switchTab('csv')">📁 Upload CSV</div>
   </div>
+
+  <!-- Smart Mode -->
+  <div id="smart-area">
+    <div class="form-card">
+      <div class="form-card-title">🔗 Connect to Your Payroll Tracker</div>
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="form-group">
+          <label>Notion Integration Token</label>
+          <input type="password" id="smartNotionToken" placeholder="secret_... or ntn_..." />
+        </div>
+        <div class="form-group">
+          <label>Payroll Tracker Database ID <span style="color:var(--muted);font-weight:400;">(optional — uses default)</span></label>
+          <input type="text" id="smartPayrollDb" placeholder="leave blank to use default" />
+        </div>
+      </div>
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin-top: 14px;">
+        <div class="form-group">
+          <label>Employee Database ID <span style="color:var(--muted);font-weight:400;">(optional — uses default)</span></label>
+          <input type="text" id="smartEmployeeDb" placeholder="leave blank to use default" />
+        </div>
+        <div class="form-group" style="justify-content:flex-end;">
+          <button class="btn-add" style="width:100%; padding:10px;" onclick="loadFromNotion()">📥 Load Payroll for Selected Month</button>
+        </div>
+      </div>
+      <div id="smart-status" style="display:none; margin-top:14px; font-size:12.5px; color: var(--accent2);"></div>
+      <div id="smart-warning" style="display:none; margin-top:10px; padding:10px 14px; background: rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.25); border-radius:8px; font-size:12px; color:#f3b9b9; line-height:1.5;"></div>
+      <div class="csv-hint" style="margin-top:12px;">💡 Pulls salary data directly from your Payroll Tracker for the Salary Month/Year selected above. Employee IBAN and Bank Routing Code come from the Employee Database — add these once per employee and every future month auto-fills.</div>
+    </div>
+  </div>
+
 
   <!-- CSV upload -->
   <div id="csv-area" style="display:none;">
@@ -340,7 +371,7 @@
   </div>
 
   <!-- Employee Table -->
-  <div class="table-wrap">
+  <div class="table-wrap" id="manual-table-wrap" style="display:none;">
     <table>
       <thead>
         <tr>
@@ -386,6 +417,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <script>
+  const PROXY = 'https://uae-hr-proxy.onrender.com';
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
   let rowCounter = 0;
 
   const fieldKeys = ['name','empId','iban','routing','basic','housing','transport','other','deductions','days'];
@@ -453,9 +487,82 @@
 
   // ── Tabs ─────────────────────────────────────────────────────────
   function switchTab(tab) {
+    document.getElementById('tab-smart').classList.toggle('active', tab === 'smart');
     document.getElementById('tab-manual').classList.toggle('active', tab === 'manual');
     document.getElementById('tab-csv').classList.toggle('active', tab === 'csv');
+    document.getElementById('smart-area').style.display = tab === 'smart' ? 'block' : 'none';
+    document.getElementById('manual-table-wrap').style.display =
+      tab === 'manual' ? 'block' :
+      (tab === 'smart' ? (document.querySelectorAll('#emp-table-body tr').length > 0 ? 'block' : 'none') : 'none');
     document.getElementById('csv-area').style.display = tab === 'csv' ? 'block' : 'none';
+    if (tab === 'manual' && document.querySelectorAll('#emp-table-body tr').length === 0) {
+      addRow();
+    }
+  }
+
+  // ── Smart Mode — Load from Notion Payroll Tracker ──────────────────
+  async function loadFromNotion() {
+    hideStatus(); hideError();
+    const token = document.getElementById('smartNotionToken').value.trim();
+    const payrollDb = document.getElementById('smartPayrollDb').value.trim();
+    const employeeDb = document.getElementById('smartEmployeeDb').value.trim();
+    const monthIdx = parseInt(document.getElementById('salaryMonth').value, 10) - 1;
+    const year = document.getElementById('salaryYear').value.trim();
+    const statusEl = document.getElementById('smart-status');
+    const warningEl = document.getElementById('smart-warning');
+    warningEl.style.display = 'none';
+
+    if (!token) { showError('Please enter your Notion Integration Token.'); return; }
+    if (!year || isNaN(monthIdx) || monthIdx < 0) { showError('Please select a valid Salary Month and Year above.'); return; }
+
+    const period = `${MONTH_NAMES[monthIdx]} ${year}`;
+    statusEl.style.display = 'block';
+    statusEl.textContent = `Loading payroll for ${period}...`;
+
+    try {
+      const params = new URLSearchParams({ token, period });
+      if (payrollDb) params.set('payrollDb', payrollDb);
+      if (employeeDb) params.set('employeeDb', employeeDb);
+
+      const res = await fetch(`${PROXY}/wps-payroll?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load payroll data');
+
+      if (!data.rows || data.rows.length === 0) {
+        statusEl.style.display = 'none';
+        showError(`No payroll records found for ${period}. Make sure the Pay Period field in your Payroll Tracker matches this exact month and year.`);
+        return;
+      }
+
+      // Clear existing rows and populate from Notion
+      document.getElementById('emp-table-body').innerHTML = '';
+      rowCounter = 0;
+      data.rows.forEach(row => {
+        addRow({
+          name: row.name,
+          empId: row.empId,
+          iban: row.iban,
+          routing: row.routing,
+          basic: row.basic,
+          housing: row.housing,
+          transport: row.transport,
+          other: row.other,
+          deductions: row.deductions,
+          days: row.days
+        });
+      });
+
+      document.getElementById('manual-table-wrap').style.display = 'block';
+      statusEl.textContent = `✅ Loaded ${data.count} employee(s) for ${period}. Review below, then download.`;
+
+      if (data.warning) {
+        warningEl.style.display = 'block';
+        warningEl.textContent = `⚠️ ${data.warning}`;
+      }
+    } catch (e) {
+      statusEl.style.display = 'none';
+      showError(`Could not load from Notion: ${e.message}`);
+    }
   }
 
   // ── CSV Template ─────────────────────────────────────────────────
@@ -668,8 +775,8 @@
   function hideError() { document.getElementById('error-bar').classList.remove('show'); }
 
   // ── Init ─────────────────────────────────────────────────────────
-  addRow();
-  addRow();
+  // No default rows — Smart Mode is the default tab. Manual Entry tab
+  // still works via "+ Add Employee", and the table appears once rows exist.
 </script>
 </body>
 </html>

@@ -939,7 +939,7 @@ function saveConfig() {
 
   // Validate license key
   if (config.licenseKey) {
-    fetch('https://uae-hr-proxy.onrender.com/validate-license', {
+    fetch('https://site--zynhr-os--jhd8sxgwgfzl.code.run/validate-license', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key: config.licenseKey })
@@ -1078,7 +1078,7 @@ function isDocumentRequest(text) {
 async function generateDocumentFromChat(userMessage) {
   showTyping();
   try {
-    const res = await fetch('https://uae-hr-proxy.onrender.com/generate-document', {
+    const res = await fetch('https://site--zynhr-os--jhd8sxgwgfzl.code.run/generate-document', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1600,7 +1600,7 @@ async function sendMessage() {
 
   try {
     // Call Render proxy — it handles both Notion and Groq
-    const res = await fetch('https://uae-hr-proxy.onrender.com/chat', {
+    const res = await fetch('https://site--zynhr-os--jhd8sxgwgfzl.code.run/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1637,7 +1637,7 @@ async function sendMessage() {
 
   } catch(e) {
     removeTyping();
-    addMessage('ai', `⚠️ **Error:** ${e.message}\n\nProxy URL: https://uae-hr-proxy.onrender.com/chat\n\nIf this is a network error, the proxy may be starting up — wait 60 seconds and try again.`);
+    addMessage('ai', `⚠️ **Error:** ${e.message}\n\nProxy URL: https://site--zynhr-os--jhd8sxgwgfzl.code.run/chat\n\nIf this is a network error, the proxy may be starting up — wait 60 seconds and try again.`);
   } finally {
     document.getElementById('sendBtn').disabled = false;
     isTyping = false;
